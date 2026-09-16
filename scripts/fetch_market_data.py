@@ -1,50 +1,157 @@
 """
-產生財經行事曆，輸出成 calendar.json。
+抓取台股儀表板所需的市場數據，輸出成 data.json。
 
-資料組成（四種不同的可靠方式）：
-1. 非農就業／CPI／PPI：美國勞工部(BLS)官方年度行事曆訂閱檔(.ics)，
-   官方直接公布全年確切日期，不需要自己用規則猜測。
-2. PCE物價指數：美國經濟分析局(BEA)官方行事曆訂閱檔(.ics)，
-   對應項目叫「Personal Income and Outlays」。
-3. FOMC 會議日期：官方一次公布全年，變動機率極低，用清單維護，
-   每年年初更新一次即可（見下方 FOMC_MEETINGS_2026）。
-4. 台指期／選擇權結算日：固定規則（每月第三個星期三），直接用程式計算。
-5. 台積電／聯發科除息日：證交所公開資料，即時查詢。
+資料來源（全部免金鑰、免申請）：
+- 台積電(2330)/聯發科(2454)收盤價：證交所 TWSE 公開資訊觀測站
+- 三大法人買賣超：證交所 TWSE 公開資訊觀測站
+- 加權指數(用來算技術指標)、道瓊、那斯達克、美元兌台幣：stooq.com 免費歷史資料
+- 10年期美債殖利率、WTI原油：FRED（美國聖路易聯準銀行）
 
-美股財報季、CES、WWDC 這類展會目前沒有加進來——這些日期沒有一個公開、
-機器可讀、免金鑰的官方時程表（財報季精確日期因公司而異，展會日期由主辦方
-每年臨時公布），要嘛需要付費資料源，要嘛需要人工每年查證後手動維護。
+執行方式：python3 fetch_market_data.py
+會在同目錄產生 data.json
 """
 import requests
+import csv
+import io
 import json
 import datetime
-import calendar
-import re
+import statistics
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (dashboard-bot)"}
 
-BLS_ICS_URL = "https://www.bls.gov/schedule/news_release/bls.ics"
-BEA_ICS_URL = "https://www.bea.gov/news/schedule/ics/online-calendar-subscription.ics"
 
-# 只挑這幾個我們關心的 BLS 發布項目（英文名稱需與 ICS 裡的 SUMMARY 完全一致）
-BLS_WATCHED = {
-    "Employment Situation": ("非農就業報告", "紅"),
-    "Consumer Price Index": ("CPI 消費者物價指數", "紅"),
-    "Producer Price Index": ("PPI 生產者物價指數", "黃"),
-}
+def fetch_yahoo_history(symbol, rng="6mo"):
+    """從 Yahoo Finance 抓歷史日線資料，回傳 [{Open, High, Low, Close}, ...]（由舊到新排序）
+    這個介面同時可以查台股個股(2330.TW)、美股指數(^DJI)、匯率(TWD=X)，格式統一。
+    """
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    params = {"range": rng, "interval": "1d"}
+    r = requests.get(url, headers=HEADERS, params=params, timeout=15)
+    r.raise_for_status()
+    payload = r.json()
+    result = payload["chart"]["result"][0]
+    timestamps = result.get("timestamp", [])
+    quote = result["indicators"]["quote"][0]
+    rows = []
+    for i in range(len(timestamps)):
+        o, h, l, c = quote["open"][i], quote["high"][i], quote["low"][i], quote["close"][i]
+        if None in (o, h, l, c):
+            continue
+        rows.append({"Open": o, "High": h, "Low": l, "Close": c})
+    return rows
 
-# 2026 年 FOMC 決策公布日（美東時間第二天下午2點公布）
-# 資料來源：federalreserve.gov/monetarypolicy/fomccalendars.htm
-# 維護方式：每年年初查一次官網公布的隔年全年日期，更新這個清單即可
-FOMC_MEETINGS_2026 = [
-    "2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17",
-    "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09",
-]
 
-WATCHED_STOCKS = {"2330": "台積電", "2454": "聯發科"}
+def fetch_fred_latest(series_id):
+    """從 FRED 抓某個總經數列的最新一筆有效數字"""
+    url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
+    r = requests.get(url, headers=HEADERS, timeout=15)
+    r.raise_for_status()
+    reader = csv.DictReader(io.StringIO(r.text))
+    rows = [row for row in reader if row.get(series_id) not in (None, ".", "")]
+    return float(rows[-1][series_id]) if rows else None
 
 
-def safe(fn, default, label):
+def fetch_taifex_futures_daily():
+    """期交所官方 OpenAPI：期貨每日交易行情，包含日盤與夜盤(盤後)資料"""
+    url = "https://openapi.taifex.com.tw/v1/DailyMarketReportFut"
+    r = requests.get(url, headers=HEADERS, timeout=20)
+    r.raise_for_status()
+    return r.json()
+
+
+def parse_num(s):
+    """把 API 回傳的字串數字（可能含逗號、%、+/-）轉成浮點數"""
+    if s is None:
+        return None
+    s = str(s).replace(",", "").replace("%", "").strip()
+    if s in ("", "-", "--"):
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def extract_tx_night_session(rows):
+    """從全部期貨資料中，篩選出「臺股期貨(TX)」的盤後(夜盤)那一筆
+    如果同時有多個到期月份，取成交量最大的（通常是近月主力合約）
+    """
+    candidates = [
+        row for row in rows
+        if row.get("Contract", "").strip() == "TX"
+        and "盤後" in (row.get("TradingSession") or "")
+    ]
+    if not candidates:
+        return None
+    candidates.sort(key=lambda row: parse_num(row.get("Volume")) or 0, reverse=True)
+    return candidates[0]
+
+
+def fetch_twse_institutional():
+    """證交所：三大法人買賣超彙總表。回傳 {法人名稱: 買賣超金額(億元)}"""
+    url = "https://www.twse.com.tw/rwd/zh/fund/BFI82U?response=json"
+    r = requests.get(url, headers=HEADERS, timeout=15)
+    r.raise_for_status()
+    payload = r.json()
+    result = {}
+    for row in payload.get("data", []):
+        try:
+            name = row[0]
+            net = float(str(row[3]).replace(",", ""))
+            result[name] = round(net / 1e8, 2)  # 轉換成「億元」
+        except (ValueError, IndexError):
+            continue
+    return result
+
+
+def compute_rsi(closes, period=14):
+    gains, losses = [], []
+    for i in range(1, len(closes)):
+        diff = closes[i] - closes[i - 1]
+        gains.append(max(diff, 0))
+        losses.append(max(-diff, 0))
+    if len(gains) < period:
+        return None
+    avg_gain = statistics.mean(gains[-period:])
+    avg_loss = statistics.mean(losses[-period:])
+    if avg_loss == 0:
+        return 100.0
+    rs = avg_gain / avg_loss
+    return round(100 - (100 / (1 + rs)), 1)
+
+
+def compute_kd(highs, lows, closes, period=9):
+    if len(closes) < period:
+        return None, None
+    k_values, d_values = [], []
+    for i in range(period - 1, len(closes)):
+        h = max(highs[i - period + 1: i + 1])
+        l = min(lows[i - period + 1: i + 1])
+        rsv = 0 if h == l else (closes[i] - l) / (h - l) * 100
+        prev_k = k_values[-1] if k_values else 50
+        k = prev_k * 2 / 3 + rsv * 1 / 3
+        k_values.append(k)
+        prev_d = d_values[-1] if d_values else 50
+        d_values.append(prev_d * 2 / 3 + k * 1 / 3)
+    return round(k_values[-1], 1), round(d_values[-1], 1)
+
+
+def compute_bias(closes, period=20):
+    if len(closes) < period:
+        return None
+    ma = statistics.mean(closes[-period:])
+    return round((closes[-1] - ma) / ma * 100, 2)
+
+
+def pct_change(rows):
+    if len(rows) < 2:
+        return None
+    prev, cur = rows[-2]["Close"], rows[-1]["Close"]
+    return round((cur - prev) / prev * 100, 2)
+
+
+def safe(fn, default=None, label=""):
+    """任何一個資料來源失敗都不要讓整支程式掛掉，改回傳 None 並印出警告"""
     try:
         return fn()
     except Exception as e:
@@ -52,201 +159,73 @@ def safe(fn, default, label):
         return default
 
 
-def parse_ics_events(ics_text):
-    """簡易 ICS 解析器：抓出每個 VEVENT 的 SUMMARY 跟 DTSTART 日期(YYYY-MM-DD)
-    ICS 格式規定：一行太長會被「折行」，下一行以空白開頭代表接續上一行，
-    這裡先把折行還原，再逐一解析 VEVENT 區塊。
-    """
-    unfolded_lines = []
-    for line in ics_text.splitlines():
-        if line.startswith((" ", "\t")) and unfolded_lines:
-            unfolded_lines[-1] += line[1:]
-        else:
-            unfolded_lines.append(line)
-
-    events = []
-    current = {}
-    in_event = False
-    for line in unfolded_lines:
-        if line.startswith("BEGIN:VEVENT"):
-            in_event = True
-            current = {}
-        elif line.startswith("END:VEVENT"):
-            if "SUMMARY" in current and "DTSTART" in current:
-                events.append(current)
-            in_event = False
-        elif in_event and line.startswith("SUMMARY"):
-            current["SUMMARY"] = line.split(":", 1)[1].strip()
-        elif in_event and line.startswith("DTSTART"):
-            # 可能是 DTSTART;TZID=US-Eastern:20260916T083000 或 DTSTART:20260826T123000Z
-            m = re.search(r"(\d{8})T", line)
-            if m:
-                d = m.group(1)
-                current["DTSTART"] = f"{d[0:4]}-{d[4:6]}-{d[6:8]}"
-    return events
-
-
-def fetch_bls_events():
-    r = requests.get(BLS_ICS_URL, headers=HEADERS, timeout=20)
-    r.raise_for_status()
-    events = parse_ics_events(r.text)
-    result = []
-    for ev in events:
-        if ev["SUMMARY"] in BLS_WATCHED:
-            name, level_word = BLS_WATCHED[ev["SUMMARY"]]
-            result.append({"date": ev["DTSTART"], "title": name, "source": "BLS"})
-    return result
-
-
-def fetch_bea_pce_events():
-    r = requests.get(BEA_ICS_URL, headers=HEADERS, timeout=20)
-    r.raise_for_status()
-    events = parse_ics_events(r.text)
-    result = []
-    for ev in events:
-        if ev["SUMMARY"].startswith("Personal Income and Outlays"):
-            result.append({"date": ev["DTSTART"], "title": "PCE 物價指數（聯準會最重視的通膨指標）", "source": "BEA"})
-    return result
-
-
-def third_wednesday(year, month):
-    c = calendar.Calendar()
-    wednesdays = [
-        d for d in c.itermonthdates(year, month)
-        if d.month == month and d.weekday() == 2
-    ]
-    return wednesdays[2]
-
-
-def upcoming_settlement_dates(count=2):
-    today = datetime.date.today()
-    dates = []
-    y, m = today.year, today.month
-    while len(dates) < count:
-        d = third_wednesday(y, m)
-        if d >= today:
-            dates.append(d)
-        m += 1
-        if m > 12:
-            m = 1
-            y += 1
-    return dates
-
-
-def upcoming_fomc_dates(count=2):
-    today = datetime.date.today()
-    dates = [datetime.date.fromisoformat(s) for s in FOMC_MEETINGS_2026]
-    return sorted(d for d in dates if d >= today)[:count]
-
-
-def fetch_twse_ex_dividend():
-    url = "https://www.twse.com.tw/rwd/zh/exRight/TWT48U?response=json"
-    r = requests.get(url, headers=HEADERS, timeout=15)
-    r.raise_for_status()
-    payload = r.json()
-    fields = payload.get("fields", [])
-    events = []
-    for row in payload.get("data", []):
-        record = dict(zip(fields, row))
-        code = (record.get("股票代號") or record.get("Code") or "").strip()
-        if code in WATCHED_STOCKS:
-            date_str = (
-                record.get("除权除息日期")
-                or record.get("除權除息日期")
-                or record.get("資料日期")
-            )
-            if date_str:
-                events.append({"code": code, "name": WATCHED_STOCKS[code], "date_raw": date_str})
-    return events
-
-
-def normalize_roc_date(date_str):
-    try:
-        parts = str(date_str).replace("-", "/").split("/")
-        if len(parts) == 3:
-            y = int(parts[0])
-            if y < 1911:
-                y += 1911
-            return datetime.date(y, int(parts[1]), int(parts[2])).isoformat()
-    except (ValueError, IndexError):
-        pass
-    return None
-
-
 def main():
-    events = []
+    twii = safe(lambda: fetch_yahoo_history("^TWII", "6mo"), [], "加權指數歷史資料")
+    closes = [r["Close"] for r in twii] if twii else []
+    highs = [r["High"] for r in twii] if twii else []
+    lows = [r["Low"] for r in twii] if twii else []
 
-    for d in upcoming_fomc_dates():
-        events.append({
-            "date": d.isoformat(),
-            "title": "FOMC 利率決策公布",
-            "level": "red",
-            "note": "美國央行決策會議，是市場最大變數之一，公布後半小時內波動通常最大。",
-        })
+    rsi = compute_rsi(closes) if closes else None
+    k, d = compute_kd(highs, lows, closes) if closes else (None, None)
+    bias = compute_bias(closes) if closes else None
 
-    for ev in safe(fetch_bls_events, [], "BLS 非農/CPI/PPI 行事曆"):
-        note_map = {
-            "非農就業報告": "美國勞動市場溫度計，數字強弱直接影響聯準會升降息判斷。",
-            "CPI 消費者物價指數": "評估通膨最核心的指標，市場對這個數字最敏感。",
-            "PPI 生產者物價指數": "反映廠商端的成本壓力，通常被視為 CPI 的領先訊號。",
-        }
-        events.append({
-            "date": ev["date"],
-            "title": ev["title"],
-            "level": "red" if "CPI" in ev["title"] or "非農" in ev["title"] else "yellow",
-            "note": note_map.get(ev["title"], ""),
-        })
+    dji = safe(lambda: fetch_yahoo_history("^DJI", "5d"), [], "道瓊指數")
+    ndq = safe(lambda: fetch_yahoo_history("^IXIC", "5d"), [], "那斯達克指數")
+    usdtwd_series = safe(lambda: fetch_yahoo_history("TWD=X", "5d"), [], "美元兌台幣")
+    tsmc_series = safe(lambda: fetch_yahoo_history("2330.TW", "5d"), [], "台積電收盤價")
+    mtk_series = safe(lambda: fetch_yahoo_history("2454.TW", "5d"), [], "聯發科收盤價")
 
-    for ev in safe(fetch_bea_pce_events, [], "BEA PCE 行事曆"):
-        events.append({
-            "date": ev["date"],
-            "title": ev["title"],
-            "level": "yellow",
-            "note": "聯準會制定利率政策時最看重的通膨指標，比 CPI 更貼近央行實際決策依據。",
-        })
+    inst = safe(fetch_twse_institutional, {}, "三大法人買賣超")
 
-    for d in upcoming_settlement_dates():
-        events.append({
-            "date": d.isoformat(),
-            "title": "台指期／選擇權結算日",
-            "level": "yellow",
-            "note": "每月第三個星期三為結算日，前一天到當天盤中容易出現不尋常的拉高或壓低。",
-        })
+    night_session = safe(
+        lambda: extract_tx_night_session(fetch_taifex_futures_daily()),
+        None,
+        "台指期夜盤",
+    )
+    if night_session is None:
+        print("[警告] 找不到台指期(TX)盤後資料，可能是收盤時段還沒有夜盤資料，或欄位名稱有異動")
 
-    ex_div_raw = safe(fetch_twse_ex_dividend, [], "除權除息預告")
-    for e in ex_div_raw:
-        iso_date = normalize_roc_date(e["date_raw"])
-        if iso_date:
-            events.append({
-                "date": iso_date,
-                "title": f"{e['name']}（{e['code']}）除息交易日",
-                "level": "yellow",
-                "note": "除息當天股價會先扣掉配發的股息，看起來變低是正常的，要看之後能不能填息。",
-            })
-        else:
-            print(f"[警告] 「{e['name']}」除息日期格式無法解析：{e['date_raw']}")
+    y10 = safe(lambda: fetch_fred_latest("DGS10"), None, "10年期美債殖利率")
+    wti = safe(lambda: fetch_fred_latest("DCOILWTICO"), None, "WTI原油")
 
-    today_str = datetime.date.today().isoformat()
-    events = [e for e in events if e["date"] >= today_str]
-    # 去重（同一天同標題只保留一筆）
-    seen = set()
-    deduped = []
-    for e in events:
-        key = (e["date"], e["title"])
-        if key not in seen:
-            seen.add(key)
-            deduped.append(e)
-    deduped.sort(key=lambda x: x["date"])
-
-    result = {
+    data = {
         "updated_at": datetime.datetime.utcnow().isoformat() + "Z",
-        "events": deduped[:8],
+        "overnight": {
+            "dow_pct": pct_change(dji),
+            "nasdaq_pct": pct_change(ndq),
+            "usdtwd": round(usdtwd_series[-1]["Close"], 2) if usdtwd_series else None,
+        },
+        "taiwan_focus": {
+            "tsmc_close": round(tsmc_series[-1]["Close"], 1) if tsmc_series else None,
+            "mtk_close": round(mtk_series[-1]["Close"], 1) if mtk_series else None,
+            "taiex_close": round(closes[-1], 0) if closes else None,
+        },
+        "institutional_flow": {
+            "foreign": inst.get("外資及陸資(不含外資自營商)") or inst.get("外資及陸資"),
+            "trust": inst.get("投信"),
+            "dealer": inst.get("自營商(自行買賣)") or inst.get("自營商"),
+        },
+        "technical": {
+            "rsi14": rsi,
+            "k": k,
+            "d": d,
+            "bias20": bias,
+        },
+        "macro": {
+            "us10y_yield": y10,
+            "wti_price": wti,
+        },
+        "taifex_night": {
+            "last": parse_num(night_session.get("Last")) if night_session else None,
+            "change_pct": parse_num(night_session.get("%")) if night_session else None,
+        },
     }
 
-    with open("calendar.json", "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False, indent=2)
+    with open("data.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    print("data.json 已產生：")
+    print(json.dumps(data, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
