@@ -20,14 +20,25 @@ import statistics
 HEADERS = {"User-Agent": "Mozilla/5.0 (dashboard-bot)"}
 
 
-def fetch_stooq_series(symbol, days=60):
-    """從 stooq 抓每日歷史資料，回傳最近 N 天的 [{Date, Open, High, Low, Close}, ...]"""
-    url = f"https://stooq.com/q/d/l/?s={symbol}&i=d"
-    r = requests.get(url, headers=HEADERS, timeout=15)
+def fetch_yahoo_history(symbol, rng="6mo"):
+    """從 Yahoo Finance 抓歷史日線資料，回傳 [{Open, High, Low, Close}, ...]（由舊到新排序）
+    這個介面同時可以查台股個股(2330.TW)、美股指數(^DJI)、匯率(TWD=X)，格式統一。
+    """
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    params = {"range": rng, "interval": "1d"}
+    r = requests.get(url, headers=HEADERS, params=params, timeout=15)
     r.raise_for_status()
-    reader = csv.DictReader(io.StringIO(r.text))
-    rows = [row for row in reader if row.get("Close")]
-    return rows[-days:]
+    payload = r.json()
+    result = payload["chart"]["result"][0]
+    timestamps = result.get("timestamp", [])
+    quote = result["indicators"]["quote"][0]
+    rows = []
+    for i in range(len(timestamps)):
+        o, h, l, c = quote["open"][i], quote["high"][i], quote["low"][i], quote["close"][i]
+        if None in (o, h, l, c):
+            continue
+        rows.append({"Open": o, "High": h, "Low": l, "Close": c})
+    return rows
 
 
 def fetch_fred_latest(series_id):
@@ -38,22 +49,6 @@ def fetch_fred_latest(series_id):
     reader = csv.DictReader(io.StringIO(r.text))
     rows = [row for row in reader if row.get(series_id) not in (None, ".", "")]
     return float(rows[-1][series_id]) if rows else None
-
-
-def fetch_twse_stock_day_all():
-    """證交所：全部上市股票當日收盤資訊。回傳 {股票代號: {欄位名: 值}}"""
-    url = "https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY_ALL?response=json"
-    r = requests.get(url, headers=HEADERS, timeout=15)
-    r.raise_for_status()
-    payload = r.json()
-    fields = payload.get("fields", [])
-    result = {}
-    for row in payload.get("data", []):
-        record = dict(zip(fields, row))
-        code = record.get("證券代號") or record.get("Code")
-        if code:
-            result[code.strip()] = record
-    return result
 
 
 def fetch_twse_institutional():
@@ -112,10 +107,10 @@ def compute_bias(closes, period=20):
     return round((closes[-1] - ma) / ma * 100, 2)
 
 
-def pct_change(series):
-    if len(series) < 2:
+def pct_change(rows):
+    if len(rows) < 2:
         return None
-    prev, cur = float(series[-2]["Close"]), float(series[-1]["Close"])
+    prev, cur = rows[-2]["Close"], rows[-1]["Close"]
     return round((cur - prev) / prev * 100, 2)
 
 
@@ -129,48 +124,37 @@ def safe(fn, default=None, label=""):
 
 
 def main():
-    twii = safe(lambda: fetch_stooq_series("^twii", days=60), [], "加權指數歷史資料")
-    closes = [float(r["Close"]) for r in twii] if twii else []
-    highs = [float(r["High"]) for r in twii] if twii else []
-    lows = [float(r["Low"]) for r in twii] if twii else []
+    twii = safe(lambda: fetch_yahoo_history("^TWII", "6mo"), [], "加權指數歷史資料")
+    closes = [r["Close"] for r in twii] if twii else []
+    highs = [r["High"] for r in twii] if twii else []
+    lows = [r["Low"] for r in twii] if twii else []
 
     rsi = compute_rsi(closes) if closes else None
     k, d = compute_kd(highs, lows, closes) if closes else (None, None)
     bias = compute_bias(closes) if closes else None
 
-    dji = safe(lambda: fetch_stooq_series("^dji", days=3), [], "道瓊指數")
-    ndq = safe(lambda: fetch_stooq_series("^ndq", days=3), [], "那斯達克指數")
-    usdtwd_series = safe(lambda: fetch_stooq_series("usdtwd", days=3), [], "美元兌台幣")
-
-    twse_all = safe(fetch_twse_stock_day_all, {}, "證交所全市場收盤價")
-    tsmc = twse_all.get("2330", {})
-    mtk = twse_all.get("2454", {})
+    dji = safe(lambda: fetch_yahoo_history("^DJI", "5d"), [], "道瓊指數")
+    ndq = safe(lambda: fetch_yahoo_history("^IXIC", "5d"), [], "那斯達克指數")
+    usdtwd_series = safe(lambda: fetch_yahoo_history("TWD=X", "5d"), [], "美元兌台幣")
+    tsmc_series = safe(lambda: fetch_yahoo_history("2330.TW", "5d"), [], "台積電收盤價")
+    mtk_series = safe(lambda: fetch_yahoo_history("2454.TW", "5d"), [], "聯發科收盤價")
 
     inst = safe(fetch_twse_institutional, {}, "三大法人買賣超")
 
     y10 = safe(lambda: fetch_fred_latest("DGS10"), None, "10年期美債殖利率")
     wti = safe(lambda: fetch_fred_latest("DCOILWTICO"), None, "WTI原油")
 
-    def to_float(record, *keys):
-        for key in keys:
-            if record.get(key):
-                try:
-                    return float(str(record[key]).replace(",", ""))
-                except ValueError:
-                    continue
-        return None
-
     data = {
         "updated_at": datetime.datetime.utcnow().isoformat() + "Z",
         "overnight": {
             "dow_pct": pct_change(dji),
             "nasdaq_pct": pct_change(ndq),
-            "usdtwd": float(usdtwd_series[-1]["Close"]) if usdtwd_series else None,
+            "usdtwd": round(usdtwd_series[-1]["Close"], 2) if usdtwd_series else None,
         },
         "taiwan_focus": {
-            "tsmc_close": to_float(tsmc, "收盤價", "ClosingPrice"),
-            "mtk_close": to_float(mtk, "收盤價", "ClosingPrice"),
-            "taiex_close": closes[-1] if closes else None,
+            "tsmc_close": round(tsmc_series[-1]["Close"], 1) if tsmc_series else None,
+            "mtk_close": round(mtk_series[-1]["Close"], 1) if mtk_series else None,
+            "taiex_close": round(closes[-1], 0) if closes else None,
         },
         "institutional_flow": {
             "foreign": inst.get("外資及陸資(不含外資自營商)") or inst.get("外資及陸資"),
