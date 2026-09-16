@@ -1,0 +1,42 @@
+# 這個檔案要放在你 repo 的 .github/workflows/update-market-data.yml
+#
+# 功能：每天固定時間自動抓市場數據、寫成 data.json、推回你的 repo。
+# 不需要你設定任何 GitHub Secrets——這一版完全不用金鑰。
+
+name: 更新市場數據
+
+on:
+  schedule:
+    # 台灣時間每天早上 8:00（UTC 前一天 00:00）
+    - cron: "0 0 * * *"
+  workflow_dispatch: {}  # 允許你在 GitHub 網頁上手動點一次「Run workflow」測試
+
+# 讓這個排程有權限把更新的 data.json 寫回 repo
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 簽出 repo
+        uses: actions/checkout@v4
+
+      - name: 設定 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安裝套件
+        run: pip install requests
+
+      - name: 執行抓取腳本
+        run: python scripts/fetch_market_data.py
+
+      - name: 提交更新後的 data.json
+        run: |
+          git config user.name "market-data-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data.json
+          git diff --staged --quiet || git commit -m "自動更新市場數據 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
