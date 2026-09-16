@@ -51,6 +51,42 @@ def fetch_fred_latest(series_id):
     return float(rows[-1][series_id]) if rows else None
 
 
+def fetch_taifex_futures_daily():
+    """期交所官方 OpenAPI：期貨每日交易行情，包含日盤與夜盤(盤後)資料"""
+    url = "https://openapi.taifex.com.tw/v1/DailyMarketReportFut"
+    r = requests.get(url, headers=HEADERS, timeout=20)
+    r.raise_for_status()
+    return r.json()
+
+
+def parse_num(s):
+    """把 API 回傳的字串數字（可能含逗號、%、+/-）轉成浮點數"""
+    if s is None:
+        return None
+    s = str(s).replace(",", "").replace("%", "").strip()
+    if s in ("", "-", "--"):
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def extract_tx_night_session(rows):
+    """從全部期貨資料中，篩選出「臺股期貨(TX)」的盤後(夜盤)那一筆
+    如果同時有多個到期月份，取成交量最大的（通常是近月主力合約）
+    """
+    candidates = [
+        row for row in rows
+        if row.get("Contract", "").strip() == "TX"
+        and "盤後" in (row.get("TradingSession") or "")
+    ]
+    if not candidates:
+        return None
+    candidates.sort(key=lambda row: parse_num(row.get("Volume")) or 0, reverse=True)
+    return candidates[0]
+
+
 def fetch_twse_institutional():
     """證交所：三大法人買賣超彙總表。回傳 {法人名稱: 買賣超金額(億元)}"""
     url = "https://www.twse.com.tw/rwd/zh/fund/BFI82U?response=json"
@@ -141,6 +177,14 @@ def main():
 
     inst = safe(fetch_twse_institutional, {}, "三大法人買賣超")
 
+    night_session = safe(
+        lambda: extract_tx_night_session(fetch_taifex_futures_daily()),
+        None,
+        "台指期夜盤",
+    )
+    if night_session is None:
+        print("[警告] 找不到台指期(TX)盤後資料，可能是收盤時段還沒有夜盤資料，或欄位名稱有異動")
+
     y10 = safe(lambda: fetch_fred_latest("DGS10"), None, "10年期美債殖利率")
     wti = safe(lambda: fetch_fred_latest("DCOILWTICO"), None, "WTI原油")
 
@@ -170,6 +214,10 @@ def main():
         "macro": {
             "us10y_yield": y10,
             "wti_price": wti,
+        },
+        "taifex_night": {
+            "last": parse_num(night_session.get("Last")) if night_session else None,
+            "change_pct": parse_num(night_session.get("%")) if night_session else None,
         },
     }
 
