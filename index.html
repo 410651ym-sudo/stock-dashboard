@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>台股市場共識與專業操盤儀表板</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      --white: #ffffff;
+      --bull: #2ea043;
+      --bear: #f85149;
+      --neutral: #d29922;
+      --accent: #58a6ff;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; display: inline-block; }
+    .bull-badge { background: rgba(46, 160, 67, 0.15); color: #3fb950; }
+    .bear-badge { background: rgba(248, 81, 73, 0.15); color: #ff7b72; }
+    .neutral-badge { background: rgba(210, 153, 34, 0.15); color: #d29922; }
+    .banner { background: rgba(88, 166, 255, 0.1); border: 1px solid var(--accent); border-left: 5px solid var(--accent); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; }
+    .macro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .macro-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+    .macro-card .val { font-size: 18px; font-weight: bold; color: var(--white); margin: 4px 0; }
+    .up { color: #3fb950; } .down { color: #ff7b72; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+    th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-muted); }
+    .refresh-btn { background: var(--accent); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1 style="margin:0; font-size:24px; color:var(--white);">台股專業操盤共識與全球宏觀儀表板</h1>
+        <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">我的專屬即時看板 · 追蹤 10 位意見領袖 · 每日同步更新</p>
+      </div>
+      <div>
+        <button class="refresh-btn" onclick="location.reload()">🔄 重新整理</button>
+      </div>
+    </header>
+
+    <div class="banner">
+      <strong style="color:var(--accent);">⚡ 當前作戰戰情：</strong>
+      <span>超級央行週（FOMC）決策即將翻牌，外資期權結算與台積電除息交會；窒息量築底階段「不盲目殺低、保留 50% 現金」，鎖定「聯發科 2 奈米新機」與「投信季底作帳強棒」。</span>
+    </div>
+
+    <div class="macro-grid">
+      <div class="macro-card"><div style="font-size:12px;color:var(--text-muted);">台積電 (2330)</div><div class="macro-card val" style="color:var(--accent);">除息填息期</div><div style="font-size:12px;color:var(--text-muted);">千元關卡有守</div></div>
+      <div class="macro-card"><div style="font-size:12px;color:var(--text-muted);">聯發科 (2454)</div><div class="macro-card val up">天璣 9600</div><div style="font-size:12px;color:#3fb950;">台積電 2nm 首發</div></div>
+      <div class="macro-card"><div style="font-size:12px;color:var(--text-muted);">10年期美債殖利率</div><div class="macro-card val down">4.95%</div><div style="font-size:12px;color:#ff7b72;">利率高檔震盪</div></div>
+      <div class="macro-card"><div style="font-size:12px;color:var(--text-muted);">WTI 紐約原油</div><div class="macro-card val down">$98.01</div><div style="font-size:12px;color:#ff7b72;">留意通膨牽制</div></div>
+      <div class="macro-card"><div style="font-size:12px;color:var(--text-muted);">台股關鍵下檔</div><div class="macro-card val" style="color:var(--white);">45,450 點</div><div style="font-size:12px;color:#3fb950;">8/31 底部支撐</div></div>
+      <div class="macro-card"><div style="font-size:12px;color:var(--text-muted);">聯準會 FOMC</div><div class="macro-card val" style="color:#d29922;">開獎倒數</div><div style="font-size:12px;color:var(--text-muted);">9/17 凌晨公布</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3 style="margin-top:0; color:var(--white);">市場多空立場比例</h3>
+        <canvas id="sentimentChart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0; color:var(--white);">操盤紀律與防守備忘錄</h3>
+        <p><strong>建議持股水位：</strong><span class="badge neutral-badge">45% ~ 50%</span>（保留半數現金）</p>
+        <p><strong>開盤不追原則：</strong>早盤 9:20 前不急進場，觀察台積電填息與權值股下影線。</p>
+        <p><strong>避險防禦核心：</strong>受惠高利率美債利差的大型金控（富邦金、國泰金）與營收雙增材料股。</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+      <h3 style="margin-top:0; color:var(--white);">10 位意見領袖立場一覽</h3>
+      <table>
+        <thead><tr><th>意見領袖</th><th>面向</th><th>立場</th><th>核心操盤指引</th></tr></thead>
+        <tbody>
+          <tr><td>股癌（謝孟恭）</td><td>科技產業</td><td><span class="badge bull-badge">看多</span></td><td>聯發科正式導入台積電 2 奈米，先進製程需求供不應求，長線拉回是買點。</td></tr>
+          <tr><td>阮慕驊</td><td>權值動態</td><td><span class="badge bull-badge">看多</span></td><td>台積電千元以下具備高殖利率優勢，窒息量洗盤已近尾聲，不宜跟著砍單。</td></tr>
+          <tr><td>愛謝克</td><td>長線週期</td><td><span class="badge bull-badge">看多</span></td><td>景氣循環擴張趨勢不變，利率開牌後不確定性消除，利空出盡機率高。</td></tr>
+          <tr><td>陳唯泰</td><td>法人作帳</td><td><span class="badge neutral-badge">中立觀望</span></td><td>外資連日大賣已達極限，靜候今晚央行會議，投信作帳股蓄勢待發。</td></tr>
+          <tr><td>股添樂</td><td>ETF金流</td><td><span class="badge neutral-badge">中立觀望</span></td><td>台積電除息前夕高股息 ETF 籌碼沉澱，等待大盤打出第二隻腳分批進場。</td></tr>
+          <tr><td>游庭皓</td><td>總經宏觀</td><td><span class="badge neutral-badge">中立觀望</span></td><td>美債殖利率在 4.95% 附近，全球大資金開牌前抱持審慎，維持防守水位。</td></tr>
+          <tr><td>菲比斯</td><td>實戰動能</td><td><span class="badge neutral-badge">中立觀望</span></td><td>量縮盤整不宜過度交易，保留現金等待今晚美股定錨後的明確方向。</td></tr>
+          <tr><td>老王（王倚隆）</td><td>技術型態</td><td><span class="badge bear-badge">看空防守</span></td><td>短期均線蓋頭反壓，未見長下影線或帶量紅 K 突破前，嚴禁盲目摸底。</td></tr>
+          <tr><td>楚狂人</td><td>期權籌碼</td><td><span class="badge bear-badge">看空防守</span></td><td>外資期權空單仍在，防範盤中壓低結算甩轎，下半場觀察新合約換倉。</td></tr>
+          <tr><td>權證小哥</td><td>主力分點</td><td><span class="badge bear-badge">看空防守</span></td><td>高借券與外資賣超標的持續避開，持股嚴格執行汰弱留強。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('sentimentChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['觀望定錨 (50%)', '看多作帳 (30%)', '避險防守 (20%)'],
+        datasets: [{
+          data: [5, 3, 2],
+          backgroundColor: ['#d29922', '#2ea043', '#f85149'],
+          borderColor: '#161b22',
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { color: '#c9d1d9' } } }
+      }
+    });
+  </script>
+</body>
+</html>
