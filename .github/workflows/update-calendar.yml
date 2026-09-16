@@ -1,0 +1,36 @@
+# 放在 .github/workflows/update-calendar.yml
+name: 更新財經行事曆
+
+on:
+  schedule:
+    - cron: "20 0 * * *"  # 台灣時間每天早上 8:20
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update-calendar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 簽出 repo
+        uses: actions/checkout@v4
+
+      - name: 設定 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安裝套件
+        run: pip install requests
+
+      - name: 執行抓取腳本
+        run: python scripts/fetch_calendar.py
+
+      - name: 提交更新後的 calendar.json
+        run: |
+          git config user.name "calendar-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add calendar.json
+          git diff --staged --quiet || git commit -m "自動更新財經行事曆 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
