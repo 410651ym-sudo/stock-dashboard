@@ -1,120 +1,730 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>台股市場共識與專業操盤儀表板</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    :root {
-      --bg: #0d1117;
-      --card-bg: #161b22;
-      --border: #30363d;
-      --text: #c9d1d9;
-      --text-muted: #8b949e;
-      --white: #ffffff;
-      --bull: #2ea043;
-      --bear: #f85149;
-      --neutral: #d29922;
-      --accent: #58a6ff;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>台股專業操盤共識與全球宏觀儀表板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6efe1;
+    --panel: #fffcf5;
+    --panel-raised: #f1e7d3;
+    --border: #e1d3b4;
+    --text: #3c2f22;
+    --text-dim: #8a7a63;
+    --accent: #a9713f;
+    --bull: #4c8c5b;
+    --bull-bg: rgba(76,140,91,0.13);
+    --neutral: #b8862a;
+    --neutral-bg: rgba(184,134,42,0.15);
+    --bear: #b6483f;
+    --bear-bg: rgba(182,72,63,0.13);
+    --cat: #6d7fa3;
+    --cat-bg: rgba(109,127,163,0.14);
+    --font-serif: 'Noto Serif TC', serif;
+    --font-sans: 'Noto Sans TC', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #241b12; --panel: #2d2216; --panel-raised: #362a1a; --border: #4a3c28;
+      --text: #f2e8d6; --text-dim: #b8a888; --accent: #dba15f;
+      --bull: #6cbb85; --bull-bg: rgba(108,187,133,0.15);
+      --neutral: #e0ac4a; --neutral-bg: rgba(224,172,74,0.16);
+      --bear: #e0776c; --bear-bg: rgba(224,119,108,0.16);
+      --cat: #9fb0d9; --cat-bg: rgba(159,176,217,0.16);
     }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-    .container { max-width: 1200px; margin: 0 auto; }
-    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
-    .badge { padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; display: inline-block; }
-    .bull-badge { background: rgba(46, 160, 67, 0.15); color: #3fb950; }
-    .bear-badge { background: rgba(248, 81, 73, 0.15); color: #ff7b72; }
-    .neutral-badge { background: rgba(210, 153, 34, 0.15); color: #d29922; }
-    .banner { background: rgba(88, 166, 255, 0.1); border: 1px solid var(--accent); border-left: 5px solid var(--accent); padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; }
-    .macro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .macro-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
-    .macro-card .val { font-size: 18px; font-weight: bold; color: var(--white); margin: 4px 0; }
-    .up { color: #3fb950; } .down { color: #ff7b72; }
-    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; }
-    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
-    th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); }
-    th { color: var(--text-muted); }
-    .refresh-btn { background: var(--accent); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
-  </style>
+  }
+  :root[data-theme="dark"] {
+    --bg: #241b12; --panel: #2d2216; --panel-raised: #362a1a; --border: #4a3c28;
+    --text: #f2e8d6; --text-dim: #b8a888; --accent: #dba15f;
+    --bull: #6cbb85; --bull-bg: rgba(108,187,133,0.15);
+    --neutral: #e0ac4a; --neutral-bg: rgba(224,172,74,0.16);
+    --bear: #e0776c; --bear-bg: rgba(224,119,108,0.16);
+    --cat: #9fb0d9; --cat-bg: rgba(159,176,217,0.16);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-sans); line-height: 1.6; }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  header.masthead { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 24px; }
+  .masthead-top { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+  h1 { font-family: var(--font-serif); font-weight: 700; font-size: clamp(24px, 4vw, 34px); margin: 0; color: var(--text); }
+  .updated-tag { font-family: var(--font-mono); font-size: 12.5px; color: var(--accent); white-space: nowrap; }
+  .tagline { color: var(--text-dim); font-size: 14px; margin-top: 6px; }
+
+  .demo-notice { background: var(--panel-raised); border: 1px dashed var(--border); border-radius: 6px; padding: 12px 16px; font-size: 13px; color: var(--text-dim); margin-bottom: 28px; }
+  .demo-notice strong { color: var(--accent); }
+
+  h2 { font-family: var(--font-serif); font-size: 18px; font-weight: 700; margin: 0 0 12px; color: var(--text); }
+  .section-block { margin-bottom: 32px; }
+  .section-sub { font-size: 13px; color: var(--text-dim); margin: -8px 0 14px; }
+
+  .ticker-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .ticker-cell { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .ticker-cell .label { font-size: 12px; color: var(--text-dim); }
+  .ticker-cell .value { font-family: var(--font-mono); font-size: 20px; font-weight: 600; margin: 4px 0 2px; color: var(--text); }
+  .ticker-cell .note { font-size: 11.5px; color: var(--text-dim); margin-bottom: 8px; }
+  .ticker-cell .explain { font-size: 12.5px; color: var(--text); background: var(--panel-raised); border-radius: 6px; padding: 8px 10px; margin-top: 6px; }
+  .ticker-cell .explain b { color: var(--accent); }
+
+  .brief { border-left: 3px solid var(--accent); background: var(--panel); padding: 16px 18px; margin-bottom: 28px; font-size: 15px; border-radius: 0 8px 8px 0; }
+  .brief .brief-label { font-family: var(--font-mono); font-size: 12px; color: var(--accent); display: block; margin-bottom: 6px; }
+
+  .ratio-bar { display: flex; height: 34px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+  .ratio-seg { display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: #fff; }
+  .ratio-seg.bull { background: var(--bull); }
+  .ratio-seg.neutral { background: var(--neutral); }
+  .ratio-seg.bear { background: var(--bear); }
+  .ratio-legend { display: flex; gap: 18px; margin-top: 10px; font-size: 13px; color: var(--text-dim); flex-wrap: wrap; }
+  .ratio-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .dot.bull { background: var(--bull); } .dot.neutral { background: var(--neutral); } .dot.bear { background: var(--bear); }
+
+  .memo { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; margin-bottom: 32px; }
+  .memo dl { margin: 0; }
+  .memo dt { font-family: var(--font-mono); font-size: 12.5px; color: var(--accent); margin-top: 12px; }
+  .memo dt:first-child { margin-top: 0; }
+  .memo dd { margin: 4px 0 0; font-size: 14.5px; }
+  .risk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
+  .risk-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; background: var(--panel-raised); }
+  .risk-card .risk-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .risk-card.stoploss .risk-title { color: var(--bear); }
+  .risk-card.takeprofit .risk-title { color: var(--bull); }
+  .risk-card p { margin: 0; font-size: 13px; }
+
+  .flow-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .flow-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .flow-card .label { font-size: 12px; color: var(--text-dim); }
+  .flow-card .value { font-family: var(--font-mono); font-size: 21px; font-weight: 700; margin: 4px 0 2px; }
+  .flow-card .value.buy { color: var(--bull); } .flow-card .value.sell { color: var(--bear); }
+  .flow-card .explain { font-size: 12.5px; color: var(--text); background: var(--panel-raised); border-radius: 6px; padding: 8px 10px; margin-top: 8px; }
+  .flow-card .explain b { color: var(--accent); }
+
+  .signal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .signal-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .signal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .signal-name { font-size: 13.5px; font-weight: 700; }
+  .light { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+  .light.green { background: var(--bull); } .light.yellow { background: var(--neutral); } .light.red { background: var(--bear); }
+  .signal-card .value { font-family: var(--font-mono); font-size: 18px; margin-bottom: 6px; }
+  .signal-card .explain { font-size: 12.5px; color: var(--text); background: var(--panel-raised); border-radius: 6px; padding: 8px 10px; }
+  .signal-card .explain b { color: var(--accent); }
+
+  .calendar-list { display: flex; flex-direction: column; gap: 8px; }
+  .cal-row { display: flex; align-items: flex-start; gap: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
+  .cal-date { font-family: var(--font-mono); font-size: 13px; color: var(--accent); min-width: 78px; }
+  .cal-body { flex: 1; }
+  .cal-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .cal-note { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
+
+  /* Style guide / risk-by-category table */
+  .style-guide { display: flex; flex-direction: column; gap: 10px; }
+  .style-row { display: grid; grid-template-columns: 150px 1fr; gap: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; align-items: start; }
+  .style-tag { display: inline-block; font-size: 12px; font-family: var(--font-mono); padding: 3px 10px; border-radius: 12px; background: var(--cat-bg); color: var(--cat); white-space: nowrap; height: fit-content; }
+  .style-tag.timeframe-short { background: var(--bear-bg); color: var(--bear); }
+  .style-tag.timeframe-mid { background: var(--neutral-bg); color: var(--neutral); }
+  .style-tag.timeframe-long { background: var(--bull-bg); color: var(--bull); }
+  .style-people { font-size: 12.5px; color: var(--text-dim); margin-top: 6px; }
+  .style-body .style-what { font-size: 13.5px; margin-bottom: 6px; }
+  .style-body .style-risk { font-size: 12.5px; background: var(--panel-raised); border-radius: 6px; padding: 8px 10px; }
+  .style-body .style-risk b { color: var(--bear); }
+  .timeframe-badges { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+
+  .stance-group { margin-bottom: 22px; }
+  .stance-heading { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-dim); }
+  .stance-heading .dot { width: 8px; height: 8px; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--neutral); border-radius: 8px; padding: 14px 16px; }
+  .card.bull { border-left-color: var(--bull); } .card.bear { border-left-color: var(--bear); }
+  .card .name-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .card .name { font-weight: 700; font-size: 15px; }
+  .card .focus { font-size: 12px; color: var(--text-dim); }
+  .card .view { font-size: 13.5px; color: var(--text); margin-top: 8px; }
+  .card .tag-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  .card .stance-tag { display: inline-block; font-size: 11.5px; font-family: var(--font-mono); padding: 1px 8px; border-radius: 10px; }
+  .card.bull .stance-tag { background: var(--bull-bg); color: var(--bull); }
+  .card.bear .stance-tag { background: var(--bear-bg); color: var(--bear); }
+  .card.neutral .stance-tag { background: var(--neutral-bg); color: var(--neutral); }
+  .card .cat-tag { display: inline-block; font-size: 11.5px; font-family: var(--font-mono); padding: 1px 8px; border-radius: 10px; background: var(--cat-bg); color: var(--cat); }
+
+  .region-heading { font-family: var(--font-serif); font-size: 20px; font-weight: 700; margin: 36px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+
+  .glossary { margin-top: 8px; margin-bottom: 32px; }
+  .glossary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .glossary-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .glossary-card .g-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+  .glossary-card.bull .g-title { color: var(--bull); }
+  .glossary-card.neutral .g-title { color: var(--neutral); }
+  .glossary-card.bear .g-title { color: var(--bear); }
+  .glossary-card p { margin: 0; font-size: 13.5px; color: var(--text); }
+
+  footer { border-top: 1px solid var(--border); margin-top: 20px; padding-top: 18px; font-size: 12.5px; color: var(--text-dim); }
+  footer p { margin: 4px 0; }
+  footer strong { color: var(--text); }
+
+  @media (max-width: 480px) {
+    .masthead-top { flex-direction: column; align-items: flex-start; }
+    .style-row { grid-template-columns: 1fr; }
+  }
+</style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div>
-        <h1 style="margin:0; font-size:24px; color:var(--white);">台股專業操盤共識與全球宏觀儀表板</h1>
-        <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">我的專屬即時看板 · 追蹤 10 位意見領袖 · 每日同步更新</p>
-      </div>
-      <div>
-        <button class="refresh-btn" onclick="location.reload()">🔄 重新整理</button>
-      </div>
-    </header>
+<div class="wrap">
 
-    <div class="banner">
-      <strong style="color:var(--accent);">⚡ 當前作戰戰情：</strong>
-      <span>超級央行週（FOMC）決策即將翻牌，外資期權結算與台積電除息交會；窒息量築底階段「不盲目殺低、保留 50% 現金」，鎖定「聯發科 2 奈米新機」與「投信季底作帳強棒」。</span>
+  <header class="masthead">
+    <div class="masthead-top">
+      <h1>台股專業操盤共識與全球宏觀儀表板</h1>
+      <span class="updated-tag" id="updatedTag">資料更新於 2026-09-16 08:00（示範資料）</span>
     </div>
+    <div class="tagline">個人資訊整理 · 追蹤 15 位台美意見領袖 · 非自動即時（預覽版）</div>
+  </header>
 
-    <div class="macro-grid">
-      <div class="macro-card"><div style="font-size:12px;color:var(--text-muted);">台積電 (2330)</div><div class="macro-card val" style="color:var(--accent);">除息填息期</div><div style="font-size:12px;color:var(--text-muted);">千元關卡有守</div></div>
-      <div class="macro-card"><div style="font-size:12px;color:var(--text-muted);">聯發科 (2454)</div><div class="macro-card val up">天璣 9600</div><div style="font-size:12px;color:#3fb950;">台積電 2nm 首發</div></div>
-      <div class="macro-card"><div style="font-size:12px;color:var(--text-muted);">10年期美債殖利率</div><div class="macro-card val down">4.95%</div><div style="font-size:12px;color:#ff7b72;">利率高檔震盪</div></div>
-      <div class="macro-card"><div style="font-size:12px;color:var(--text-muted);">WTI 紐約原油</div><div class="macro-card val down">$98.01</div><div style="font-size:12px;color:#ff7b72;">留意通膨牽制</div></div>
-      <div class="macro-card"><div style="font-size:12px;color:var(--text-muted);">台股關鍵下檔</div><div class="macro-card val" style="color:var(--white);">45,450 點</div><div style="font-size:12px;color:#3fb950;">8/31 底部支撐</div></div>
-      <div class="macro-card"><div style="font-size:12px;color:var(--text-muted);">聯準會 FOMC</div><div class="macro-card val" style="color:#d29922;">開獎倒數</div><div style="font-size:12px;color:var(--text-muted);">9/17 凌晨公布</div></div>
+  <div class="demo-notice" id="demoNotice">
+    <strong>資料載入中…</strong> 正在讀取最新市場數據。
+  </div>
+
+  <div class="section-block">
+  <h2>隔夜國際市場總覽</h2>
+  <div class="section-sub">開盤前先看這裡——美股怎麼收，直接影響台股今天怎麼開</div>
+  <div class="ticker-grid">
+    <div class="ticker-cell">
+      <div class="label">道瓊工業指數</div>
+      <div class="value" id="dowPct">—</div>
+      <div class="note">美股收盤</div>
+      <div class="explain"><b>白話：</b>美國傳統大型公司股票的平均表現。收紅通常代表市場氣氛偏樂觀，對台股開盤是比較好的訊號。</div>
     </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3 style="margin-top:0; color:var(--white);">市場多空立場比例</h3>
-        <canvas id="sentimentChart" height="200"></canvas>
-      </div>
-      <div class="card">
-        <h3 style="margin-top:0; color:var(--white);">操盤紀律與防守備忘錄</h3>
-        <p><strong>建議持股水位：</strong><span class="badge neutral-badge">45% ~ 50%</span>（保留半數現金）</p>
-        <p><strong>開盤不追原則：</strong>早盤 9:20 前不急進場，觀察台積電填息與權值股下影線。</p>
-        <p><strong>避險防禦核心：</strong>受惠高利率美債利差的大型金控（富邦金、國泰金）與營收雙增材料股。</p>
-      </div>
+    <div class="ticker-cell">
+      <div class="label">那斯達克指數</div>
+      <div class="value" id="nasdaqPct">—</div>
+      <div class="note">美股收盤</div>
+      <div class="explain"><b>白話：</b>美國科技股為主的指數，台積電、聯發科這類科技股常跟它連動，這裡收黑，台股電子股開盤要留意。</div>
     </div>
+    <div class="ticker-cell">
+      <div class="label">台指期夜盤</div>
+      <div class="value">－</div>
+      <div class="note">此項目暫未自動化</div>
+      <div class="explain"><b>白話：</b>晚上還有一個「先行版」的台股期貨在交易，可以先預告明天開盤大概會漲還是跌。這一項資料來源比較複雜，目前先手動維護，之後再考慮自動化。</div>
+    </div>
+    <div class="ticker-cell">
+      <div class="label">美元/台幣</div>
+      <div class="value" id="usdtwd">—</div>
+      <div class="note">即期匯率</div>
+      <div class="explain"><b>白話：</b>台幣走弱（數字變大）有時代表外資把錢换成美元匯出，對台股資金是壓力。</div>
+    </div>
+  </div>
+  </div>
 
-    <div class="card" style="margin-top: 20px;">
-      <h3 style="margin-top:0; color:var(--white);">10 位意見領袖立場一覽</h3>
-      <table>
-        <thead><tr><th>意見領袖</th><th>面向</th><th>立場</th><th>核心操盤指引</th></tr></thead>
-        <tbody>
-          <tr><td>股癌（謝孟恭）</td><td>科技產業</td><td><span class="badge bull-badge">看多</span></td><td>聯發科正式導入台積電 2 奈米，先進製程需求供不應求，長線拉回是買點。</td></tr>
-          <tr><td>阮慕驊</td><td>權值動態</td><td><span class="badge bull-badge">看多</span></td><td>台積電千元以下具備高殖利率優勢，窒息量洗盤已近尾聲，不宜跟著砍單。</td></tr>
-          <tr><td>愛謝克</td><td>長線週期</td><td><span class="badge bull-badge">看多</span></td><td>景氣循環擴張趨勢不變，利率開牌後不確定性消除，利空出盡機率高。</td></tr>
-          <tr><td>陳唯泰</td><td>法人作帳</td><td><span class="badge neutral-badge">中立觀望</span></td><td>外資連日大賣已達極限，靜候今晚央行會議，投信作帳股蓄勢待發。</td></tr>
-          <tr><td>股添樂</td><td>ETF金流</td><td><span class="badge neutral-badge">中立觀望</span></td><td>台積電除息前夕高股息 ETF 籌碼沉澱，等待大盤打出第二隻腳分批進場。</td></tr>
-          <tr><td>游庭皓</td><td>總經宏觀</td><td><span class="badge neutral-badge">中立觀望</span></td><td>美債殖利率在 4.95% 附近，全球大資金開牌前抱持審慎，維持防守水位。</td></tr>
-          <tr><td>菲比斯</td><td>實戰動能</td><td><span class="badge neutral-badge">中立觀望</span></td><td>量縮盤整不宜過度交易，保留現金等待今晚美股定錨後的明確方向。</td></tr>
-          <tr><td>老王（王倚隆）</td><td>技術型態</td><td><span class="badge bear-badge">看空防守</span></td><td>短期均線蓋頭反壓，未見長下影線或帶量紅 K 突破前，嚴禁盲目摸底。</td></tr>
-          <tr><td>楚狂人</td><td>期權籌碼</td><td><span class="badge bear-badge">看空防守</span></td><td>外資期權空單仍在，防範盤中壓低結算甩轎，下半場觀察新合約換倉。</td></tr>
-          <tr><td>權證小哥</td><td>主力分點</td><td><span class="badge bear-badge">看空防守</span></td><td>高借券與外資賣超標的持續避開，持股嚴格執行汰弱留強。</td></tr>
-        </tbody>
-      </table>
+  <div class="section-block">
+  <h2>台股今日焦點</h2>
+  <div class="ticker-grid">
+    <div class="ticker-cell">
+      <div class="label">台積電 2330</div>
+      <div class="value" id="tsmcClose">—</div>
+      <div class="note">收盤價</div>
+      <div class="explain"><b>白話：</b>台積電這支股票，一股的價格站在 1000 元附近。1000 元是大家心理上的一道關卡，股價守得住代表買方有信心。</div>
+    </div>
+    <div class="ticker-cell">
+      <div class="label">聯發科 2454</div>
+      <div class="value" id="mtkClose">—</div>
+      <div class="note">收盤價</div>
+      <div class="explain"><b>白話：</b>聯發科的收盤股價，數字自動更新。旁邊的「天璣 9600 / 2nm 首發」這類產業消息目前先手動維護。</div>
+    </div>
+    <div class="ticker-cell">
+      <div class="label">10年期美債殖利率</div>
+      <div class="value" id="us10y">—</div>
+      <div class="note">利率高檔震盪</div>
+      <div class="explain"><b>白話：</b>這個數字越高，資金越不急著跑去買股票，對股市是一種壓力。</div>
+    </div>
+    <div class="ticker-cell">
+      <div class="label">WTI 紐約原油</div>
+      <div class="value" id="wti">—</div>
+      <div class="note">留意通膨牽制</div>
+      <div class="explain"><b>白話：</b>油價漲代表成本上升，物價可能跟著漲，央行就比較不敢降息。</div>
+    </div>
+    <div class="ticker-cell">
+      <div class="label">加權指數</div>
+      <div class="value" id="taiexClose">—</div>
+      <div class="note">收盤指數（支撐位仍需人工設定）</div>
+      <div class="explain"><b>白話：</b>大盤的一道防線，是 8 月 31 日的低點，觀察會不會跌破的關鍵位置。</div>
+    </div>
+    <div class="ticker-cell">
+      <div class="label">聯準會 FOMC</div>
+      <div class="value">9/17 凌晨</div>
+      <div class="note">開獎倒數</div>
+      <div class="explain"><b>白話：</b>決定要不要升息或降息的會議，全世界投資人都在等這個結果。</div>
+    </div>
+  </div>
+  </div>
+
+  <div class="section-block">
+    <h2>三大法人買賣超</h2>
+    <div class="section-sub">白話：這是「真的錢」在買還是在賣，比意見領袖的看法更硬</div>
+    <div class="flow-grid">
+      <div class="flow-card">
+        <div class="label">外資</div>
+        <div class="value" id="foreignFlow">—</div>
+        <div class="explain" id="foreignFlowExplain"><b>白話：</b>外資今天的買賣超金額（億元）。外資資金量最大，連續賣超要注意大盤上檔壓力。</div>
+      </div>
+      <div class="flow-card">
+        <div class="label">投信</div>
+        <div class="value" id="trustFlow">—</div>
+        <div class="explain"><b>白話：</b>投信今天的買賣超金額（億元），季底作帳的股票短期人氣容易比較旺。</div>
+      </div>
+      <div class="flow-card">
+        <div class="label">自營商</div>
+        <div class="value" id="dealerFlow">—</div>
+        <div class="explain"><b>白話：</b>自營商今天的買賣超金額（億元），動作通常較短線，參考性比外資、投信低一些。</div>
+      </div>
     </div>
   </div>
 
-  <script>
-    const ctx = document.getElementById('sentimentChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['觀望定錨 (50%)', '看多作帳 (30%)', '避險防守 (20%)'],
-        datasets: [{
-          data: [5, 3, 2],
-          backgroundColor: ['#d29922', '#2ea043', '#f85149'],
-          borderColor: '#161b22',
-          borderWidth: 3
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { position: 'bottom', labels: { color: '#c9d1d9' } } }
+  <div class="section-block">
+    <h2>技術指標燈號</h2>
+    <div class="section-sub">白話：把技術分析數字簡化成紅黃綠燈，不用自己會算指標也看得懂</div>
+    <div class="signal-grid">
+      <div class="signal-card">
+        <div class="signal-top"><span class="signal-name">大盤 RSI（14日）</span><span class="light yellow" id="rsiLight"></span></div>
+        <div class="value" id="rsiValue">—</div>
+        <div class="explain"><b>白話：</b>0~100 之間，超過 70 算過熱，低於 30 算超跌。現在 52.3 屬於中間，沒有明顯過熱或超跌。</div>
+      </div>
+      <div class="signal-card">
+        <div class="signal-top"><span class="signal-name">大盤 KD 值</span><span class="light green" id="kdLight"></span></div>
+        <div class="value" id="kdValue">—</div>
+        <div class="explain"><b>白話：</b>K 值由下往上穿過 D 值，且都在偏低區間，通常視為短線止跌訊號。</div>
+      </div>
+      <div class="signal-card">
+        <div class="signal-top"><span class="signal-name">乖離率（20日均線）</span><span class="light red" id="biasLight"></span></div>
+        <div class="value" id="biasValue">—</div>
+        <div class="explain"><b>白話：</b>股價跌得比均線快很多，短期有反彈需求，但也可能代表趨勢偏弱。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-block">
+    <h2>本週財經行事曆</h2>
+    <div class="calendar-list">
+      <div class="cal-row">
+        <div class="cal-date">9/17（三）</div>
+        <div class="cal-body">
+          <div class="cal-title"><span class="light red" style="width:8px;height:8px;"></span>FOMC 利率決策公布</div>
+          <div class="cal-note">白話：本週最大變數，公布後半小時內波動通常最大。</div>
+        </div>
+      </div>
+      <div class="cal-row">
+        <div class="cal-date">9/18（四）</div>
+        <div class="cal-body">
+          <div class="cal-title"><span class="light yellow" style="width:8px;height:8px;"></span>台積電除息交易日</div>
+          <div class="cal-note">白話：除息當天股價會先扣掉股息，看起來變低是正常的，要看之後能不能填息。</div>
+        </div>
+      </div>
+      <div class="cal-row">
+        <div class="cal-date">9/19（五）</div>
+        <div class="cal-body">
+          <div class="cal-title"><span class="light yellow" style="width:8px;height:8px;"></span>台指期／選擇權結算日</div>
+          <div class="cal-note">白話：前一天到當天盤中容易出現不尋常的拉高或壓低。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="brief">
+    <span class="brief-label">當前作戰戰情</span>
+    超級央行週（FOMC）決策即將翻牌，外資期權結算與台積電除息交會；窒息量築底階段「不盲目殺低、保留 50% 現金」，鎖定「聯發科 2 奈米新機」與「投信季底作帳強棒」。
+  </div>
+
+  <section class="section-block">
+    <h2>市場多空立場比例</h2>
+    <div class="section-sub">15 位意見領袖，示範統計</div>
+    <div class="ratio-bar">
+      <div class="ratio-seg bull" style="flex:5">看多 5</div>
+      <div class="ratio-seg neutral" style="flex:7">中立 7</div>
+      <div class="ratio-seg bear" style="flex:3">看空 3</div>
+    </div>
+    <div class="ratio-legend">
+      <span><span class="dot bull"></span>看多（5 位）</span>
+      <span><span class="dot neutral"></span>中立觀望（7 位）</span>
+      <span><span class="dot bear"></span>看空防守（3 位）</span>
+    </div>
+  </section>
+
+  <div class="memo">
+    <h2>操盤紀律與防守備忘錄</h2>
+    <dl>
+      <dt>建議持股水位</dt>
+      <dd>45% ~ 50%（保留半數現金）</dd>
+      <dt>開盤不追原則</dt>
+      <dd>早盤 9:20 前不急進場，觀察台積電填息與權值股下影線。</dd>
+      <dt>避險防禦核心</dt>
+      <dd>受惠高利率美債利差的大型金控（富邦金、國泰金）與營收雙增材料股。</dd>
+    </dl>
+    <div class="risk-grid">
+      <div class="risk-card stoploss">
+        <div class="risk-title">停損參考</div>
+        <p>個股跌破買進成本 -5% 或跌破季線，先減碼一半，不留感情單。</p>
+      </div>
+      <div class="risk-card takeprofit">
+        <div class="risk-title">停利參考</div>
+        <p>單筆獲利達 +8~10% 分批獲利了結，剩餘部位設移動停利保護獲利。</p>
+      </div>
+    </div>
+  </div>
+
+  <section class="section-block">
+    <h2>意見領袖操作風格 × 風險管理對照表</h2>
+    <div class="section-sub">白話：不同類型的意見，能拿來做的判斷不一樣——先搞懂這張表，再去看下面每個人的看法，才不會誤把「長線觀點」拿去做「當沖決定」。</div>
+    <div class="style-guide">
+
+      <div class="style-row">
+        <div>
+          <span class="style-tag">產業基本面</span>
+          <div class="style-people">代表：陸行之</div>
+          <div class="timeframe-badges"><span class="style-tag timeframe-long">適合中長線</span></div>
+        </div>
+        <div class="style-body">
+          <div class="style-what">從台積電資本支出、毛利率、法說會數字，判斷產業長期方向，是最扎實的基本面來源。</div>
+          <div class="style-risk"><b>風險提醒：</b>基本面消息公布時，股價往往已經提前反應（消息面落後股價），看到「利多」才追高，容易買在短期高點。</div>
+        </div>
+      </div>
+
+      <div class="style-row">
+        <div>
+          <span class="style-tag">總經政策</span>
+          <div class="style-people">代表：謝金河、游庭皓、愛謝克</div>
+          <div class="timeframe-badges"><span class="style-tag timeframe-long">適合中長線</span></div>
+        </div>
+        <div class="style-body">
+          <div class="style-what">從利率、通膨、景氣循環等大格局判斷方向，適合幫你決定「持股水位」而不是「今天買哪一支」。</div>
+          <div class="style-risk"><b>風險提醒：</b>總經觀點的時間尺度常常是「以季、以年計」，如果拿來當短線進出的訊號，時間點常常會差很多個月。</div>
+        </div>
+      </div>
+
+      <div class="style-row">
+        <div>
+          <span class="style-tag">長線資產配置</span>
+          <div class="style-people">代表：市場先生</div>
+          <div class="timeframe-badges"><span class="style-tag timeframe-long">適合長線</span></div>
+        </div>
+        <div class="style-body">
+          <div class="style-what">不預測短期漲跌，強調分散、長期持有、資產配置，適合當作「紀律」的參考基準。</div>
+          <div class="style-risk"><b>風險提醒：</b>這類觀點刻意不理會短期波動，如果心態上等不了長期，套用這類建議反而容易在盤整期感到焦慮而亂了陣腳。</div>
+        </div>
+      </div>
+
+      <div class="style-row">
+        <div>
+          <span class="style-tag">法人與資金籌碼</span>
+          <div class="style-people">代表：阮慕驊、陳唯泰、股添樂</div>
+          <div class="timeframe-badges"><span class="style-tag timeframe-mid">適合中線</span></div>
+        </div>
+        <div class="style-body">
+          <div class="style-what">追蹤外資、投信、ETF 資金流向，判斷「錢在往哪裡走」，比純意見更接近事實。</div>
+          <div class="style-risk"><b>風險提醒：</b>籌碼是落後指標——法人今天買，不代表明天不會反手賣；單日大量買賣有時只是換股操作，不是方向性判斷，勿過度解讀單一天的數字。</div>
+        </div>
+      </div>
+
+      <div class="style-row">
+        <div>
+          <span class="style-tag">技術型態</span>
+          <div class="style-people">代表：老王（王倚隆）</div>
+          <div class="timeframe-badges"><span class="style-tag timeframe-mid">適合中短線</span></div>
+        </div>
+        <div class="style-body">
+          <div class="style-what">用線圖、均線、K 棒型態判斷短中期轉折，直覺、視覺化，容易上手。</div>
+          <div class="style-risk"><b>風險提醒：</b>技術指標常常「先預警但不保證結果」，容易被單日的大量买卖騙线（假突破/假跌破），不要只看單一指標就重壓。</div>
+        </div>
+      </div>
+
+      <div class="style-row">
+        <div>
+          <span class="style-tag">期權槓桿籌碼</span>
+          <div class="style-people">代表：楚狂人、權證小哥</div>
+          <div class="timeframe-badges"><span class="style-tag timeframe-short">僅適合短線</span></div>
+        </div>
+        <div class="style-body">
+          <div class="style-what">觀察期權未平倉、融資融券、權證主力進出，捕捉短線籌碼的變化。</div>
+          <div class="style-risk"><b>風險提醒：</b>這是槓桿商品的推論，波動極大、且會因單一結算日大幅改變，本身不適合新手直接跟單操作，只適合當作參考氣氛的溫度計。</div>
+        </div>
+      </div>
+
+      <div class="style-row">
+        <div>
+          <span class="style-tag">實戰動能</span>
+          <div class="style-people">代表：股癌、菲比斯</div>
+          <div class="timeframe-badges"><span class="style-tag timeframe-mid">因人而異</span></div>
+        </div>
+        <div class="style-body">
+          <div class="style-what">結合邏輯推理與個人實戰經驗給出判斷，敘事清楚、容易理解。</div>
+          <div class="style-risk"><b>風險提醒：</b>每個人的資金部位、風險承受度、進出場成本都不一樣，別人的操作邏輯不能直接複製到自己的部位上。</div>
+        </div>
+      </div>
+
+      <div class="style-row">
+        <div>
+          <span class="style-tag">美股情緒短線</span>
+          <div class="style-people">代表：Jim Cramer</div>
+          <div class="timeframe-badges"><span class="style-tag timeframe-short">僅適合短線氣氛參考</span></div>
+        </div>
+        <div class="style-body">
+          <div class="style-what">每日對美股個股即時發表看法，反應快、涵蓋面廣，適合當作市場情緒溫度計。</div>
+          <div class="style-risk"><b>風險提醒：</b>市場上長年有「反向操作」的討論，準確度爭議較大，看法每天可能反轉，不建議直接依照單一集節目做買賣決定。</div>
+        </div>
+      </div>
+
+      <div class="style-row">
+        <div>
+          <span class="style-tag">美股成長股敘事</span>
+          <div class="style-people">代表：Cathie Wood</div>
+          <div class="timeframe-badges"><span class="style-tag timeframe-long">適合長線、高風險承受者</span></div>
+        </div>
+        <div class="style-body">
+          <div class="style-what">聚焦顛覆式創新與長期成長題材，風格樂觀積極，看的是 5~10 年的產業趨勢。</div>
+          <div class="style-risk"><b>風險提醒：</b>風格集中且波動極大，過去績效有大起大落的紀錄，不適合重壓單一敘事，也不適合拿來判斷短期進出場時機。</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <h2 class="region-heading">台股意見領袖（12 位）</h2>
+
+  <div class="stance-group">
+    <div class="stance-heading"><span class="dot bull"></span>看多</div>
+    <div class="card-grid">
+      <div class="card bull">
+        <div class="tag-row"><span class="stance-tag">看多</span><span class="cat-tag">產業基本面</span></div>
+        <div class="name-row"><span class="name">陸行之</span><span class="focus">半導體供應鏈</span></div>
+        <div class="view">前外資半導體分析師，從台積電資本支出與毛利率結構判斷，2nm 先進製程需求強勁，長期產能吃緊格局不變。</div>
+      </div>
+      <div class="card bull">
+        <div class="tag-row"><span class="stance-tag">看多</span><span class="cat-tag">實戰動能</span></div>
+        <div class="name-row"><span class="name">股癌（謝孟恭）</span><span class="focus">科技產業</span></div>
+        <div class="view">聯發科正式導入台積電 2 奈米，先進製程需求供不應求，長線拉回是買點。</div>
+      </div>
+      <div class="card bull">
+        <div class="tag-row"><span class="stance-tag">看多</span><span class="cat-tag">法人與資金籌碼</span></div>
+        <div class="name-row"><span class="name">阮慕驊</span><span class="focus">權值動態</span></div>
+        <div class="view">台積電千元以下具備高殖利率優勢，窒息量洗盤已近尾聲，不宜跟著砍單。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stance-group">
+    <div class="stance-heading"><span class="dot neutral"></span>中立觀望</div>
+    <div class="card-grid">
+      <div class="card neutral">
+        <div class="tag-row"><span class="stance-tag">中立觀望</span><span class="cat-tag">總經政策</span></div>
+        <div class="name-row"><span class="name">謝金河</span><span class="focus">總經政策</span></div>
+        <div class="view">《財訊》社長，判斷這波最恐慌的修正階段可能已經告一段落，但仍需靜待央行決策定調後續格局。</div>
+      </div>
+      <div class="card neutral">
+        <div class="tag-row"><span class="stance-tag">中立觀望</span><span class="cat-tag">法人與資金籌碼</span></div>
+        <div class="name-row"><span class="name">陳唯泰</span><span class="focus">法人作帳</span></div>
+        <div class="view">外資連日大賣已達極限，靜候今晚央行會議，投信作帳股蓄勢待發。</div>
+      </div>
+      <div class="card neutral">
+        <div class="tag-row"><span class="stance-tag">中立觀望</span><span class="cat-tag">法人與資金籌碼</span></div>
+        <div class="name-row"><span class="name">股添樂</span><span class="focus">ETF金流</span></div>
+        <div class="view">台積電除息前夕高股息 ETF 籌碼沉澱，等待大盤打出第二隻腳分批進場。</div>
+      </div>
+      <div class="card neutral">
+        <div class="tag-row"><span class="stance-tag">中立觀望</span><span class="cat-tag">長線資產配置</span></div>
+        <div class="name-row"><span class="name">市場先生</span><span class="focus">指數化投資</span></div>
+        <div class="view">不預測短期方向，維持定期定額與資產配置紀律，短線震盪不影響長期部位。</div>
+      </div>
+      <div class="card neutral">
+        <div class="tag-row"><span class="stance-tag">中立觀望</span><span class="cat-tag">總經政策</span></div>
+        <div class="name-row"><span class="name">游庭皓</span><span class="focus">總經宏觀</span></div>
+        <div class="view">美債殖利率在 4.95% 附近，全球大資金開牌前抱持審慎，維持防守水位。</div>
+      </div>
+      <div class="card neutral">
+        <div class="tag-row"><span class="stance-tag">中立觀望</span><span class="cat-tag">實戰動能</span></div>
+        <div class="name-row"><span class="name">菲比斯</span><span class="focus">實戰動能</span></div>
+        <div class="view">量縮盤整不宜過度交易，保留現金等待今晚美股定錨後的明確方向。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stance-group">
+    <div class="stance-heading"><span class="dot bear"></span>看空防守</div>
+    <div class="card-grid">
+      <div class="card bear">
+        <div class="tag-row"><span class="stance-tag">看空防守</span><span class="cat-tag">技術型態</span></div>
+        <div class="name-row"><span class="name">老王（王倚隆）</span><span class="focus">技術型態</span></div>
+        <div class="view">短期均線蓋頭反壓，未見長下影線或帶量紅 K 突破前，嚴禁盲目摸底。</div>
+      </div>
+      <div class="card bear">
+        <div class="tag-row"><span class="stance-tag">看空防守</span><span class="cat-tag">期權槓桿籌碼</span></div>
+        <div class="name-row"><span class="name">楚狂人</span><span class="focus">期權籌碼</span></div>
+        <div class="view">外資期權空單仍在，防範盤中壓低結算甩轎，下半場觀察新合約換倉。</div>
+      </div>
+      <div class="card bear">
+        <div class="tag-row"><span class="stance-tag">看空防守</span><span class="cat-tag">期權槓桿籌碼</span></div>
+        <div class="name-row"><span class="name">權證小哥</span><span class="focus">主力分點</span></div>
+        <div class="view">高借券與外資賣超標的持續避開，持股嚴格執行汰弱留強。</div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="region-heading">美股意見領袖（3 位）</h2>
+
+  <div class="stance-group">
+    <div class="stance-heading"><span class="dot bull"></span>看多</div>
+    <div class="card-grid">
+      <div class="card bull">
+        <div class="tag-row"><span class="stance-tag">看多</span><span class="cat-tag">總經政策</span></div>
+        <div class="name-row"><span class="name">愛謝克（izaax）</span><span class="focus">美股景氣循環</span></div>
+        <div class="view">以總體經濟數字判斷景氣循環擴張階段未變，利率決策落地後不確定性下降，維持長線偏多框架。</div>
+      </div>
+      <div class="card bull">
+        <div class="tag-row"><span class="stance-tag">看多</span><span class="cat-tag">美股成長股敘事</span></div>
+        <div class="name-row"><span class="name">Cathie Wood</span><span class="focus">顛覆式創新</span></div>
+        <div class="view">維持對 AI、機器人等長期創新題材的高度樂觀，認為短期利率波動不改變 5~10 年的結構性成長趨勢。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stance-group">
+    <div class="stance-heading"><span class="dot neutral"></span>中立觀望</div>
+    <div class="card-grid">
+      <div class="card neutral">
+        <div class="tag-row"><span class="stance-tag">中立觀望</span><span class="cat-tag">美股情緒短線</span></div>
+        <div class="name-row"><span class="name">Jim Cramer</span><span class="focus">美股即時評論</span></div>
+        <div class="view">FOMC 前對個股態度轉趨保守，建議先觀察會議結果，不急於加碼科技權值股。</div>
+      </div>
+    </div>
+  </div>
+
+  <section class="glossary">
+    <h2>看不懂「看多 / 看空」？這裡直接告訴你</h2>
+    <div class="glossary-grid">
+      <div class="glossary-card bull">
+        <div class="g-title"><span class="dot bull"></span>看多</div>
+        <p>意思是「覺得接下來股價比較可能會漲」。這位意見領袖偏向樂觀，認為現在的低點可能是找買點的時機，而不是要趕快賣掉逃跑。</p>
+      </div>
+      <div class="glossary-card neutral">
+        <div class="g-title"><span class="dot neutral"></span>中立觀望</div>
+        <p>意思是「方向還不明朗，先別急著動作」。這位意見領袖覺得現在買進或賣出都有風險，建議先觀察，等訊號更清楚一點再決定。</p>
+      </div>
+      <div class="glossary-card bear">
+        <div class="g-title"><span class="dot bear"></span>看空防守</div>
+        <p>意思是「覺得接下來股價比較可能會跌，或風險比較高」。這位意見領袖偏保守，建議先減少持股、保留現金，不要現在追高買進。</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p><strong>本頁僅為個人資訊整理，非投資建議，盈虧自負。</strong></p>
+    <p>所有意見領袖觀點為其個人立場之整理摘要，可能與其原始發言時間點不同，請以當事人最新公開發言為準。</p>
+    <p>本版本為排版與結構預覽，數字為示範資料，尚未接上自動化即時來源。</p>
+  </footer>
+
+</div>
+
+<script>
+// 讀取 data.json（由 GitHub Actions 每天自動產生），把數字填進頁面。
+// 任何一個欄位抓不到，就顯示「—」，不會讓整頁壞掉。
+(function () {
+  function fmtPct(n) {
+    if (n === null || n === undefined) return "—";
+    const sign = n > 0 ? "+" : "";
+    return `${sign}${n}%`;
+  }
+  function fmtNum(n, digits = 2) {
+    if (n === null || n === undefined) return "—";
+    return Number(n).toLocaleString("zh-TW", { maximumFractionDigits: digits });
+  }
+  function fmtFlow(n) {
+    if (n === null || n === undefined) return "—";
+    const sign = n > 0 ? "+" : "";
+    return `${sign}${n} 億`;
+  }
+  function setFlowClass(el, n) {
+    el.classList.remove("buy", "sell");
+    if (n === null || n === undefined) return;
+    el.classList.add(n >= 0 ? "buy" : "sell");
+  }
+  function setLight(el, level) {
+    if (!el) return;
+    el.classList.remove("green", "yellow", "red");
+    el.classList.add(level);
+  }
+  function set(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
+  fetch("data.json", { cache: "no-store" })
+    .then((res) => {
+      if (!res.ok) throw new Error("data.json 讀取失敗：" + res.status);
+      return res.json();
+    })
+    .then((data) => {
+      // 更新時間
+      if (data.updated_at) {
+        const d = new Date(data.updated_at);
+        set("updatedTag", "資料更新於 " + d.toLocaleString("zh-TW", { hour12: false }));
+      }
+      const notice = document.getElementById("demoNotice");
+      if (notice) {
+        notice.innerHTML =
+          "<strong>市場數據為自動更新。</strong> 股價、殖利率、油價、法人籌碼、技術指標每日自動抓取；意見領袖與行事曆內容仍為人工維護。";
+      }
+
+      // 隔夜市場
+      const on = data.overnight || {};
+      set("dowPct", fmtPct(on.dow_pct));
+      set("nasdaqPct", fmtPct(on.nasdaq_pct));
+      set("usdtwd", fmtNum(on.usdtwd));
+
+      // 台股焦點
+      const tf = data.taiwan_focus || {};
+      set("tsmcClose", tf.tsmc_close != null ? fmtNum(tf.tsmc_close, 1) : "—");
+      set("mtkClose", tf.mtk_close != null ? fmtNum(tf.mtk_close, 1) : "—");
+      set("taiexClose", tf.taiex_close != null ? fmtNum(tf.taiex_close, 0) + " 點" : "—");
+
+      // 總經
+      const macro = data.macro || {};
+      set("us10y", macro.us10y_yield != null ? macro.us10y_yield + "%" : "—");
+      set("wti", macro.wti_price != null ? "$" + macro.wti_price : "—");
+
+      // 三大法人
+      const flow = data.institutional_flow || {};
+      const foreignEl = document.getElementById("foreignFlow");
+      const trustEl = document.getElementById("trustFlow");
+      const dealerEl = document.getElementById("dealerFlow");
+      if (foreignEl) { foreignEl.textContent = fmtFlow(flow.foreign); setFlowClass(foreignEl, flow.foreign); }
+      if (trustEl) { trustEl.textContent = fmtFlow(flow.trust); setFlowClass(trustEl, flow.trust); }
+      if (dealerEl) { dealerEl.textContent = fmtFlow(flow.dealer); setFlowClass(dealerEl, flow.dealer); }
+
+      // 技術指標燈號
+      const tech = data.technical || {};
+      if (tech.rsi14 != null) {
+        set("rsiValue", tech.rsi14);
+        setLight(document.getElementById("rsiLight"), tech.rsi14 >= 70 || tech.rsi14 <= 30 ? "red" : "yellow");
+      }
+      if (tech.k != null && tech.d != null) {
+        set("kdValue", `K ${tech.k} / D ${tech.d}`);
+        setLight(document.getElementById("kdLight"), tech.k > tech.d ? "green" : "red");
+      }
+      if (tech.bias20 != null) {
+        set("biasValue", tech.bias20 + "%");
+        setLight(document.getElementById("biasLight"), Math.abs(tech.bias20) >= 5 ? "red" : "yellow");
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      const notice = document.getElementById("demoNotice");
+      if (notice) {
+        notice.innerHTML =
+          "<strong>目前讀不到最新市場數據（data.json）。</strong> 可能是自動更新排程還沒執行過，或路徑不對，頁面暫時顯示預設的「—」。";
       }
     });
-  </script>
+})();
+</script>
 </body>
 </html>
