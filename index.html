@@ -28,7 +28,6 @@
     --font-sans: 'Noto Sans TC', sans-serif;
     --font-mono: 'IBM Plex Mono', monospace;
   }
-  
   :root[data-theme="dark"] {
     --bg: #241b12; --panel: #2d2216; --panel-raised: #362a1a; --border: #4a3c28;
     --text: #f2e8d6; --text-dim: #b8a888; --accent: #dba15f;
@@ -172,7 +171,7 @@
       <h1>台股專業操盤共識與全球宏觀儀表板</h1>
       <span class="updated-tag" id="updatedTag">資料更新於 2026-09-16 08:00（示範資料）</span>
     </div>
-    <div class="tagline">個人資訊整理 · 追蹤 15 位台美意見領袖 · 市場數據自動更新</div>
+    <div class="tagline">個人資訊整理 · 追蹤 15 位台美意見領袖 · 非自動即時（預覽版）</div>
   </header>
 
   <div class="demo-notice" id="demoNotice">
@@ -197,9 +196,9 @@
     </div>
     <div class="ticker-cell">
       <div class="label">台指期夜盤</div>
-      <div class="value">－</div>
-      <div class="note">此項目暫未自動化</div>
-      <div class="explain"><b>白話：</b>晚上還有一個「先行版」的台股期貨在交易，可以先預告明天開盤大概會漲還是跌。這一項資料來源比較複雜，目前先手動維護，之後再考慮自動化。</div>
+      <div class="value" id="taifexNight">—</div>
+      <div class="note" id="taifexNightNote">臺股期貨(TX)盤後時段</div>
+      <div class="explain"><b>白話：</b>晚上還有一個「先行版」的台股期貨在交易，可以先預告明天開盤大概會漲還是跌。</div>
     </div>
     <div class="ticker-cell">
       <div class="label">美元/台幣</div>
@@ -705,6 +704,17 @@
       if (tech.bias20 != null) {
         set("biasValue", tech.bias20 + "%");
         setLight(document.getElementById("biasLight"), Math.abs(tech.bias20) >= 5 ? "red" : "yellow");
+      }
+
+      // 台指期夜盤
+      const night = data.taifex_night || {};
+      if (night.last != null) {
+        const chg = night.change_pct != null ? ` (${night.change_pct > 0 ? "+" : ""}${night.change_pct}%)` : "";
+        set("taifexNight", fmtNum(night.last, 0) + chg);
+        set("taifexNightNote", "臺股期貨(TX)盤後時段");
+      } else {
+        set("taifexNight", "—");
+        set("taifexNightNote", "暫無盤後資料");
       }
     })
     .catch((err) => {
