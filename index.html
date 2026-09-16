@@ -141,6 +141,12 @@
   .card.bear .stance-tag { background: var(--bear-bg); color: var(--bear); }
   .card.neutral .stance-tag { background: var(--neutral-bg); color: var(--neutral); }
   .card .cat-tag { display: inline-block; font-size: 11.5px; font-family: var(--font-mono); padding: 1px 8px; border-radius: 10px; background: var(--cat-bg); color: var(--cat); }
+  .card .news-list { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
+  .card .news-list:empty { display: none; }
+  .card .news-list .news-heading { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+  .card .news-list a { display: block; font-size: 12.5px; color: var(--accent); text-decoration: none; margin-bottom: 3px; line-height: 1.4; }
+  .card .news-list a:hover { text-decoration: underline; }
+  .card .news-list .news-meta { font-size: 10.5px; color: var(--text-dim); }
 
   .region-heading { font-family: var(--font-serif); font-size: 20px; font-weight: 700; margin: 36px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
 
@@ -171,7 +177,7 @@
       <h1>台股專業操盤共識與全球宏觀儀表板</h1>
       <span class="updated-tag" id="updatedTag">資料更新於 2026-09-16 08:00（示範資料）</span>
     </div>
-    <div class="tagline">個人資訊整理 · 追蹤 15 位台美意見領袖 · 市場數據自動更新</div>
+    <div class="tagline">個人資訊整理 · 追蹤 15 位台美意見領袖 · 依市場數據自動更新</div>
   </header>
 
   <div class="demo-notice" id="demoNotice">
@@ -296,29 +302,10 @@
   </div>
 
   <div class="section-block">
-    <h2>本週財經行事曆</h2>
-    <div class="calendar-list">
-      <div class="cal-row">
-        <div class="cal-date">9/17（三）</div>
-        <div class="cal-body">
-          <div class="cal-title"><span class="light red" style="width:8px;height:8px;"></span>FOMC 利率決策公布</div>
-          <div class="cal-note">白話：本週最大變數，公布後半小時內波動通常最大。</div>
-        </div>
-      </div>
-      <div class="cal-row">
-        <div class="cal-date">9/18（四）</div>
-        <div class="cal-body">
-          <div class="cal-title"><span class="light yellow" style="width:8px;height:8px;"></span>台積電除息交易日</div>
-          <div class="cal-note">白話：除息當天股價會先扣掉股息，看起來變低是正常的，要看之後能不能填息。</div>
-        </div>
-      </div>
-      <div class="cal-row">
-        <div class="cal-date">9/19（五）</div>
-        <div class="cal-body">
-          <div class="cal-title"><span class="light yellow" style="width:8px;height:8px;"></span>台指期／選擇權結算日</div>
-          <div class="cal-note">白話：前一天到當天盤中容易出現不尋常的拉高或壓低。</div>
-        </div>
-      </div>
+    <h2>近期財經行事曆</h2>
+    <div class="section-sub" id="calendarSub">涵蓋 FOMC、非農/CPI/PPI/PCE、台指期結算、除息日，依官方時程自動更新</div>
+    <div class="calendar-list" id="calendarList">
+      <div class="cal-row"><div class="cal-body"><div class="cal-title">資料載入中…</div></div></div>
     </div>
   </div>
 
@@ -384,7 +371,7 @@
       <div class="style-row">
         <div>
           <span class="style-tag">總經政策</span>
-          <div class="style-people">代表：謝金河、游庭皓、愛謝克</div>
+          <div class="style-people">代表：謝金河、游庭皓、愛榭克</div>
           <div class="timeframe-badges"><span class="style-tag timeframe-long">適合中長線</span></div>
         </div>
         <div class="style-body">
@@ -485,20 +472,26 @@
   <div class="stance-group">
     <div class="stance-heading"><span class="dot bull"></span>看多</div>
     <div class="card-grid">
-      <div class="card bull">
+      <div class="card bull" data-key="luxingzhi">
         <div class="tag-row"><span class="stance-tag">看多</span><span class="cat-tag">產業基本面</span></div>
         <div class="name-row"><span class="name">陸行之</span><span class="focus">半導體供應鏈</span></div>
         <div class="view">前外資半導體分析師，從台積電資本支出與毛利率結構判斷，2nm 先進製程需求強勁，長期產能吃緊格局不變。</div>
+      
+        <div class="news-list" data-news-key="luxingzhi"></div>
       </div>
-      <div class="card bull">
+      <div class="card bull" data-key="gooaye">
         <div class="tag-row"><span class="stance-tag">看多</span><span class="cat-tag">實戰動能</span></div>
         <div class="name-row"><span class="name">股癌（謝孟恭）</span><span class="focus">科技產業</span></div>
         <div class="view">聯發科正式導入台積電 2 奈米，先進製程需求供不應求，長線拉回是買點。</div>
+      
+        <div class="news-list" data-news-key="gooaye"></div>
       </div>
-      <div class="card bull">
+      <div class="card bull" data-key="ruanmuhua">
         <div class="tag-row"><span class="stance-tag">看多</span><span class="cat-tag">法人與資金籌碼</span></div>
         <div class="name-row"><span class="name">阮慕驊</span><span class="focus">權值動態</span></div>
         <div class="view">台積電千元以下具備高殖利率優勢，窒息量洗盤已近尾聲，不宜跟著砍單。</div>
+      
+        <div class="news-list" data-news-key="ruanmuhua"></div>
       </div>
     </div>
   </div>
@@ -506,35 +499,47 @@
   <div class="stance-group">
     <div class="stance-heading"><span class="dot neutral"></span>中立觀望</div>
     <div class="card-grid">
-      <div class="card neutral">
+      <div class="card neutral" data-key="xiejinhe">
         <div class="tag-row"><span class="stance-tag">中立觀望</span><span class="cat-tag">總經政策</span></div>
         <div class="name-row"><span class="name">謝金河</span><span class="focus">總經政策</span></div>
         <div class="view">《財訊》社長，判斷這波最恐慌的修正階段可能已經告一段落，但仍需靜待央行決策定調後續格局。</div>
+      
+        <div class="news-list" data-news-key="xiejinhe"></div>
       </div>
-      <div class="card neutral">
+      <div class="card neutral" data-key="chenweitai">
         <div class="tag-row"><span class="stance-tag">中立觀望</span><span class="cat-tag">法人與資金籌碼</span></div>
         <div class="name-row"><span class="name">陳唯泰</span><span class="focus">法人作帳</span></div>
         <div class="view">外資連日大賣已達極限，靜候今晚央行會議，投信作帳股蓄勢待發。</div>
+      
+        <div class="news-list" data-news-key="chenweitai"></div>
       </div>
-      <div class="card neutral">
+      <div class="card neutral" data-key="gutianle">
         <div class="tag-row"><span class="stance-tag">中立觀望</span><span class="cat-tag">法人與資金籌碼</span></div>
         <div class="name-row"><span class="name">股添樂</span><span class="focus">ETF金流</span></div>
         <div class="view">台積電除息前夕高股息 ETF 籌碼沉澱，等待大盤打出第二隻腳分批進場。</div>
+      
+        <div class="news-list" data-news-key="gutianle"></div>
       </div>
-      <div class="card neutral">
+      <div class="card neutral" data-key="mrmarket">
         <div class="tag-row"><span class="stance-tag">中立觀望</span><span class="cat-tag">長線資產配置</span></div>
         <div class="name-row"><span class="name">市場先生</span><span class="focus">指數化投資</span></div>
         <div class="view">不預測短期方向，維持定期定額與資產配置紀律，短線震盪不影響長期部位。</div>
+      
+        <div class="news-list" data-news-key="mrmarket"></div>
       </div>
-      <div class="card neutral">
+      <div class="card neutral" data-key="youtinghao">
         <div class="tag-row"><span class="stance-tag">中立觀望</span><span class="cat-tag">總經政策</span></div>
         <div class="name-row"><span class="name">游庭皓</span><span class="focus">總經宏觀</span></div>
         <div class="view">美債殖利率在 4.95% 附近，全球大資金開牌前抱持審慎，維持防守水位。</div>
+      
+        <div class="news-list" data-news-key="youtinghao"></div>
       </div>
-      <div class="card neutral">
+      <div class="card neutral" data-key="phoebus">
         <div class="tag-row"><span class="stance-tag">中立觀望</span><span class="cat-tag">實戰動能</span></div>
         <div class="name-row"><span class="name">菲比斯</span><span class="focus">實戰動能</span></div>
         <div class="view">量縮盤整不宜過度交易，保留現金等待今晚美股定錨後的明確方向。</div>
+      
+        <div class="news-list" data-news-key="phoebus"></div>
       </div>
     </div>
   </div>
@@ -542,20 +547,26 @@
   <div class="stance-group">
     <div class="stance-heading"><span class="dot bear"></span>看空防守</div>
     <div class="card-grid">
-      <div class="card bear">
+      <div class="card bear" data-key="laowang">
         <div class="tag-row"><span class="stance-tag">看空防守</span><span class="cat-tag">技術型態</span></div>
         <div class="name-row"><span class="name">老王（王倚隆）</span><span class="focus">技術型態</span></div>
         <div class="view">短期均線蓋頭反壓，未見長下影線或帶量紅 K 突破前，嚴禁盲目摸底。</div>
+      
+        <div class="news-list" data-news-key="laowang"></div>
       </div>
-      <div class="card bear">
+      <div class="card bear" data-key="chukuangren">
         <div class="tag-row"><span class="stance-tag">看空防守</span><span class="cat-tag">期權槓桿籌碼</span></div>
         <div class="name-row"><span class="name">楚狂人</span><span class="focus">期權籌碼</span></div>
         <div class="view">外資期權空單仍在，防範盤中壓低結算甩轎，下半場觀察新合約換倉。</div>
+      
+        <div class="news-list" data-news-key="chukuangren"></div>
       </div>
-      <div class="card bear">
+      <div class="card bear" data-key="quanzheng">
         <div class="tag-row"><span class="stance-tag">看空防守</span><span class="cat-tag">期權槓桿籌碼</span></div>
         <div class="name-row"><span class="name">權證小哥</span><span class="focus">主力分點</span></div>
         <div class="view">高借券與外資賣超標的持續避開，持股嚴格執行汰弱留強。</div>
+      
+        <div class="news-list" data-news-key="quanzheng"></div>
       </div>
     </div>
   </div>
@@ -565,15 +576,19 @@
   <div class="stance-group">
     <div class="stance-heading"><span class="dot bull"></span>看多</div>
     <div class="card-grid">
-      <div class="card bull">
+      <div class="card bull" data-key="izaax">
         <div class="tag-row"><span class="stance-tag">看多</span><span class="cat-tag">總經政策</span></div>
-        <div class="name-row"><span class="name">愛謝克（izaax）</span><span class="focus">美股景氣循環</span></div>
+        <div class="name-row"><span class="name">愛榭克（izaax）</span><span class="focus">美股景氣循環</span></div>
         <div class="view">以總體經濟數字判斷景氣循環擴張階段未變，利率決策落地後不確定性下降，維持長線偏多框架。</div>
+      
+        <div class="news-list" data-news-key="izaax"></div>
       </div>
-      <div class="card bull">
+      <div class="card bull" data-key="cathiewood">
         <div class="tag-row"><span class="stance-tag">看多</span><span class="cat-tag">美股成長股敘事</span></div>
         <div class="name-row"><span class="name">Cathie Wood</span><span class="focus">顛覆式創新</span></div>
         <div class="view">維持對 AI、機器人等長期創新題材的高度樂觀，認為短期利率波動不改變 5~10 年的結構性成長趨勢。</div>
+      
+        <div class="news-list" data-news-key="cathiewood"></div>
       </div>
     </div>
   </div>
@@ -581,10 +596,12 @@
   <div class="stance-group">
     <div class="stance-heading"><span class="dot neutral"></span>中立觀望</div>
     <div class="card-grid">
-      <div class="card neutral">
+      <div class="card neutral" data-key="jimcramer">
         <div class="tag-row"><span class="stance-tag">中立觀望</span><span class="cat-tag">美股情緒短線</span></div>
         <div class="name-row"><span class="name">Jim Cramer</span><span class="focus">美股即時評論</span></div>
         <div class="view">FOMC 前對個股態度轉趨保守，建議先觀察會議結果，不急於加碼科技權值股。</div>
+      
+        <div class="news-list" data-news-key="jimcramer"></div>
       </div>
     </div>
   </div>
@@ -662,7 +679,7 @@
       const notice = document.getElementById("demoNotice");
       if (notice) {
         notice.innerHTML =
-          "<strong>市場數據為自動更新。</strong> 股價、殖利率、油價、法人籌碼、技術指標每日自動抓取；意見領袖與行事曆內容仍為人工維護。";
+          "<strong>市場數據為自動更新。</strong> 股價、殖利率、油價、法人籌碼、技術指標、財經行事曆每日自動更新；意見領袖新聞連結每日自動蒐集，立場判斷仍為人工維護。";
       }
 
       // 隔夜市場
@@ -724,6 +741,70 @@
         notice.innerHTML =
           "<strong>目前讀不到最新市場數據（data.json）。</strong> 可能是自動更新排程還沒執行過，或路徑不對，頁面暫時顯示預設的「—」。";
       }
+    });
+
+  // 讀取 opinions.json，把每位意見領袖最新的相關新聞連結放進卡片下方。
+  // 這裡完全不做內容解讀或摘要，只列出標題、來源、連結——立場判斷仍由你自己更新。
+  fetch("opinions.json", { cache: "no-store" })
+    .then((res) => {
+      if (!res.ok) throw new Error("opinions.json 讀取失敗：" + res.status);
+      return res.json();
+    })
+    .then((data) => {
+      const people = data.people || {};
+      document.querySelectorAll(".news-list[data-news-key]").forEach((el) => {
+        const key = el.getAttribute("data-news-key");
+        const person = people[key];
+        if (!person || !person.news || person.news.length === 0) return;
+        const heading = document.createElement("div");
+        heading.className = "news-heading";
+        heading.textContent = "最新相關報導：";
+        el.appendChild(heading);
+        person.news.slice(0, 3).forEach((item) => {
+          const a = document.createElement("a");
+          a.href = item.link;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.textContent = item.title;
+          el.appendChild(a);
+        });
+      });
+    })
+    .catch((err) => {
+      console.error(err);
+      // 抓不到就不顯示這塊，不影響頁面其他部分
+    });
+
+  // 讀取 calendar.json，渲染近期財經行事曆
+  fetch("calendar.json", { cache: "no-store" })
+    .then((res) => {
+      if (!res.ok) throw new Error("calendar.json 讀取失敗：" + res.status);
+      return res.json();
+    })
+    .then((data) => {
+      const list = document.getElementById("calendarList");
+      const events = data.events || [];
+      if (!list || events.length === 0) return;
+      list.innerHTML = "";
+      const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+      events.forEach((ev) => {
+        const d = new Date(ev.date + "T00:00:00");
+        const dateLabel = `${d.getMonth() + 1}/${d.getDate()}（${weekdays[d.getDay()]}）`;
+        const row = document.createElement("div");
+        row.className = "cal-row";
+        row.innerHTML = `
+          <div class="cal-date">${dateLabel}</div>
+          <div class="cal-body">
+            <div class="cal-title"><span class="light ${ev.level || "yellow"}" style="width:8px;height:8px;"></span>${ev.title}</div>
+            <div class="cal-note">白話：${ev.note || ""}</div>
+          </div>`;
+        list.appendChild(row);
+      });
+    })
+    .catch((err) => {
+      console.error(err);
+      const list = document.getElementById("calendarList");
+      if (list) list.innerHTML = '<div class="cal-row"><div class="cal-body"><div class="cal-title">目前讀不到行事曆資料</div></div></div>';
     });
 })();
 </script>
