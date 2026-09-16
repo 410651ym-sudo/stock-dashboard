@@ -1,0 +1,28 @@
+{
+  "updated_at": "2026-09-16T00:00:00Z",
+  "overnight": {
+    "dow_pct": 0.42,
+    "nasdaq_pct": -0.18,
+    "usdtwd": 32.15
+  },
+  "taiwan_focus": {
+    "tsmc_close": 1005.0,
+    "mtk_close": 1580.0,
+    "taiex_close": 45610
+  },
+  "institutional_flow": {
+    "foreign": -32.6,
+    "trust": 8.4,
+    "dealer": 3.1
+  },
+  "technical": {
+    "rsi14": 52.3,
+    "k": 38.0,
+    "d": 41.0,
+    "bias20": -6.8
+  },
+  "macro": {
+    "us10y_yield": 4.95,
+    "wti_price": 98.01
+  }
+}
