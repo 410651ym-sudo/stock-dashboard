@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>台股操盤共識與全球宏觀儀表板</title>
+<title>台股專業操盤共識與全球宏觀儀表板</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -222,7 +222,7 @@
       <div class="label">台積電 2330</div>
       <div class="value" id="tsmcClose">—</div>
       <div class="note">收盤價</div>
-      <div class="explain"><b>白話：</b>台積電這支股票，一股的價格站在 1000 元附近。1000 元是大家心理上的一道關卡，股價守得住代表買方有信心。</div>
+      <div class="explain"><b>白話：</b>這是台積電最新一個交易日的收盤價（新台幣/股）。可以觀察這個數字最近是持續上漲、下跌，還是在某個區間整理，幫助判斷短期買賣氣氛。</div>
     </div>
     <div class="ticker-cell">
       <div class="label">聯發科 2454</div>
@@ -245,14 +245,14 @@
     <div class="ticker-cell">
       <div class="label">加權指數</div>
       <div class="value" id="taiexClose">—</div>
-      <div class="note">收盤指數（支撐位仍需人工設定）</div>
-      <div class="explain"><b>白話：</b>大盤的一道防線，是 8 月 31 日的低點，觀察會不會跌破的關鍵位置。</div>
+      <div class="note">收盤指數</div>
+      <div class="explain"><b>白話：</b>把所有台股股票平均起來看的整體表現。可以觀察這個數字最近幾天是漲多還是跌多，判斷大盤目前偏強還是偏弱。</div>
     </div>
     <div class="ticker-cell">
       <div class="label">聯準會 FOMC</div>
-      <div class="value">9/17 凌晨</div>
-      <div class="note">開獎倒數</div>
-      <div class="explain"><b>白話：</b>決定要不要升息或降息的會議，全世界投資人都在等這個結果。</div>
+      <div class="value" id="fomcNext">—</div>
+      <div class="note">下一次決策日期</div>
+      <div class="explain"><b>白話：</b>決定要不要升息或降息的會議，全世界投資人都在等這個結果。詳細日期請看下方「近期財經行事曆」。</div>
     </div>
   </div>
   </div>
@@ -286,17 +286,17 @@
       <div class="signal-card">
         <div class="signal-top"><span class="signal-name">大盤 RSI（14日）</span><span class="light yellow" id="rsiLight"></span></div>
         <div class="value" id="rsiValue">—</div>
-        <div class="explain"><b>白話：</b>0~100 之間，超過 70 算過熱，低於 30 算超跌。現在 52.3 屬於中間，沒有明顯過熱或超跌。</div>
+        <div class="explain"><b>白話：</b>數字在 0~100 之間，超過 70 通常算過熱（可能要漲多回檔），低於 30 算超跌（可能要止跌反彈），中間區域代表沒有明顯過熱或超跌。</div>
       </div>
       <div class="signal-card">
         <div class="signal-top"><span class="signal-name">大盤 KD 值</span><span class="light green" id="kdLight"></span></div>
         <div class="value" id="kdValue">—</div>
-        <div class="explain"><b>白話：</b>K 值由下往上穿過 D 值，且都在偏低區間，通常視為短線止跌訊號。</div>
+        <div class="explain"><b>白話：</b>K 值由下往上穿過 D 值，通常視為短線止跌訊號；K 值由上往下穿過 D 值，則視為短線轉弱訊號。</div>
       </div>
       <div class="signal-card">
         <div class="signal-top"><span class="signal-name">乖離率（20日均線）</span><span class="light red" id="biasLight"></span></div>
         <div class="value" id="biasValue">—</div>
-        <div class="explain"><b>白話：</b>股價跌得比均線快很多，短期有反彈需求，但也可能代表趨勢偏弱。</div>
+        <div class="explain"><b>白話：</b>股價跟均線差距過大（不論正負），代表短期漲跌可能過快，容易出現拉回或反彈修正。</div>
       </div>
     </div>
   </div>
@@ -627,6 +627,7 @@
   <footer>
     <p><strong>本頁僅為個人資訊整理，非投資建議，盈虧自負。</strong></p>
     <p>所有意見領袖觀點為其個人立場之整理摘要，可能與其原始發言時間點不同，請以當事人最新公開發言為準。</p>
+    <p>本版本為排版與結構預覽，數字為示範資料，尚未接上自動化即時來源。</p>
   </footer>
 
 </div>
@@ -786,9 +787,14 @@
       if (!list || events.length === 0) return;
       list.innerHTML = "";
       const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+      let fomcShown = false;
       events.forEach((ev) => {
         const d = new Date(ev.date + "T00:00:00");
         const dateLabel = `${d.getMonth() + 1}/${d.getDate()}（${weekdays[d.getDay()]}）`;
+        if (!fomcShown && ev.title.includes("FOMC")) {
+          set("fomcNext", dateLabel);
+          fomcShown = true;
+        }
         const row = document.createElement("div");
         row.className = "cal-row";
         row.innerHTML = `
