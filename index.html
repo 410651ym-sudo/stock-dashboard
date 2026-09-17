@@ -222,13 +222,13 @@
       <div class="label">台積電 2330</div>
       <div class="value" id="tsmcClose">—</div>
       <div class="note">收盤價</div>
-      <div class="explain"><b>白話：</b>這是台積電最新一個交易日的收盤價（新台幣/股）。可以觀察這個數字最近是持續上漲、下跌，還是在某個區間整理，幫助判斷短期買賣氣氛。</div>
+      <div class="explain" id="tsmcNewsSlot"><b>白話：</b>這是台積電最新一個交易日的收盤價（新台幣/股）。可以觀察這個數字最近是持續上漲、下跌，還是在某個區間整理，幫助判斷短期買賣氣氛。</div>
     </div>
     <div class="ticker-cell">
       <div class="label">聯發科 2454</div>
       <div class="value" id="mtkClose">—</div>
       <div class="note">收盤價</div>
-      <div class="explain"><b>白話：</b>聯發科的收盤股價，數字自動更新。旁邊的「天璣 9600 / 2nm 首發」這類產業消息目前先手動維護。</div>
+      <div class="explain" id="mtkNewsSlot"><b>白話：</b>聯發科的收盤股價，數字自動更新。</div>
     </div>
     <div class="ticker-cell">
       <div class="label">10年期美債殖利率</div>
@@ -311,7 +311,7 @@
 
   <div class="brief">
     <span class="brief-label">當前作戰戰情</span>
-    超級央行週（FOMC）決策即將翻牌，外資期權結算與台積電除息交會；窒息量築底階段「不盲目殺低、保留 50% 現金」，鎖定「聯發科 2 奈米新機」與「投信季底作帳強棒」。
+    <span id="briefText">資料載入中…</span>
   </div>
 
   <section class="section-block">
@@ -665,6 +665,53 @@
     if (el) el.textContent = text;
   }
 
+  // 「當前作戰戰情」：完全用樣板句型代入真實數字組成，不使用 AI 生成文字，
+  // 避免任何解讀性錯誤——只是把已經抓到的數字組成一句話。
+  let briefData = null;
+  let briefEvents = null;
+
+  function classifyRSI(rsi) {
+    if (rsi == null) return "";
+    if (rsi >= 70) return "偏熱";
+    if (rsi <= 30) return "偏弱";
+    return "中性";
+  }
+
+  function renderBrief() {
+    const el = document.getElementById("briefText");
+    if (!el || !briefData) return;
+    const flow = briefData.institutional_flow || {};
+    const tech = briefData.technical || {};
+    const tf = briefData.taiwan_focus || {};
+    const macro = briefData.macro || {};
+    const parts = [];
+
+    if (flow.foreign != null) {
+      parts.push(`外資今日${flow.foreign >= 0 ? "買超" : "賣超"} ${Math.abs(flow.foreign)} 億`);
+    }
+    if (tf.taiex_close != null) {
+      parts.push(`加權指數收在 ${fmtNum(tf.taiex_close, 0)} 點`);
+    }
+    if (macro.us10y_yield != null) {
+      parts.push(`10年期美債殖利率 ${macro.us10y_yield}%`);
+    }
+    if (tech.rsi14 != null) {
+      parts.push(`RSI 顯示大盤目前${classifyRSI(tech.rsi14)}`);
+    }
+
+    let sentence = parts.length > 0 ? parts.join("，") + "。" : "";
+
+    if (briefEvents && briefEvents.length > 0) {
+      const nearest = briefEvents[0];
+      const d = new Date(nearest.date + "T00:00:00");
+      const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+      const label = `${d.getMonth() + 1}/${d.getDate()}（${weekdays[d.getDay()]}）`;
+      sentence += ` 近期關注：${label} ${nearest.title}。`;
+    }
+
+    el.textContent = sentence || "資料尚未齊全，暫時無法組成戰情摘要。";
+  }
+
   fetch("data.json", { cache: "no-store" })
     .then((res) => {
       if (!res.ok) throw new Error("data.json 讀取失敗：" + res.status);
@@ -733,6 +780,9 @@
         set("taifexNight", "—");
         set("taifexNightNote", "暫無盤後資料");
       }
+
+      briefData = data;
+      renderBrief();
     })
     .catch((err) => {
       console.error(err);
@@ -769,6 +819,17 @@
           el.appendChild(a);
         });
       });
+
+      // 台積電/聯發科最新新聞，取代原本寫死的產業消息文字
+      function fillStockNews(slotId, key) {
+        const el = document.getElementById(slotId);
+        const person = people[key];
+        if (!el || !person || !person.news || person.news.length === 0) return;
+        const latest = person.news[0];
+        el.innerHTML = `<b>最新消息：</b><a href="${latest.link}" target="_blank" rel="noopener noreferrer">${latest.title}</a>`;
+      }
+      fillStockNews("tsmcNewsSlot", "tsmc_news");
+      fillStockNews("mtkNewsSlot", "mtk_news");
     })
     .catch((err) => {
       console.error(err);
@@ -805,6 +866,9 @@
           </div>`;
         list.appendChild(row);
       });
+
+      briefEvents = events;
+      renderBrief();
     })
     .catch((err) => {
       console.error(err);
