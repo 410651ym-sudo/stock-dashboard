@@ -1,0 +1,45 @@
+# 這個檔案要放在 .github/workflows/update-opinions.yml
+#
+# 功能：每天自動抓 15 位意見領袖的最新相關新聞連結，寫成 opinions.json。
+# 一樣不需要任何 API 金鑰。
+#
+# 重要：這支自動化只負責「找資料」，不做立場判斷或內容摘要。
+# 看到新的新聞連結後，若要更新某位意見領袖卡片上的立場標籤或一句話摘要，
+# 仍需要你自己判讀後手動修改 index.html。
+
+name: 更新意見領袖新聞
+
+on:
+  schedule:
+    # 台灣時間每天早上 8:10（跟市場數據錯開一點，避免同時搶資源）
+    - cron: "10 0 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update-opinions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 簽出 repo
+        uses: actions/checkout@v4
+
+      - name: 設定 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安裝套件
+        run: pip install requests
+
+      - name: 執行抓取腳本
+        run: python scripts/fetch_opinions.py
+
+      - name: 提交更新後的 opinions.json
+        run: |
+          git config user.name "opinions-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add opinions.json
+          git diff --staged --quiet || git commit -m "自動更新意見領袖新聞 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
