@@ -1,9 +1,9 @@
 {
-  "updated_at": "2026-09-28T00:11:40.200557Z",
+  "updated_at": "2026-09-29T00:11:15.430742Z",
   "overnight": {
-    "dow_pct": 0.93,
-    "nasdaq_pct": 0.48,
-    "usdtwd": 31.77
+    "dow_pct": -0.67,
+    "nasdaq_pct": -0.92,
+    "usdtwd": 31.78
   },
   "taiwan_focus": {
     "tsmc_close": 2475.0,
@@ -22,7 +22,7 @@
     "bias20": 2.71
   },
   "macro": {
-    "us10y_yield": 5.18,
+    "us10y_yield": 5.17,
     "wti_price": 96.41
   },
   "taifex_night": {
