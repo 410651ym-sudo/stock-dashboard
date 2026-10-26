@@ -1,9 +1,9 @@
 {
-  "updated_at": "2026-10-25T02:55:11.213146Z",
+  "updated_at": "2026-10-26T02:53:40.499817Z",
   "overnight": {
     "dow_pct": -1.23,
     "nasdaq_pct": -0.21,
-    "usdtwd": 32.57
+    "usdtwd": 32.58
   },
   "taiwan_focus": {
     "tsmc_close": 2385.0,
