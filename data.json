@@ -1,14 +1,14 @@
 {
-  "updated_at": "2026-11-08T04:01:56.120243Z",
+  "updated_at": "2026-11-09T04:18:32.140970Z",
   "overnight": {
     "dow_pct": -0.46,
     "nasdaq_pct": 1.09,
-    "usdtwd": 33.11
+    "usdtwd": 32.79
   },
   "taiwan_focus": {
-    "tsmc_close": 2135.0,
-    "mtk_close": 3390.0,
-    "taiex_close": 39702.0
+    "tsmc_close": 2265.0,
+    "mtk_close": 3725.0,
+    "taiex_close": 42022.0
   },
   "institutional_flow": {
     "foreign": -911.88,
@@ -16,10 +16,10 @@
     "dealer": -43.09
   },
   "technical": {
-    "rsi14": 16.1,
-    "k": 14.1,
-    "d": 15.1,
-    "bias20": -13.94
+    "rsi14": 30.3,
+    "k": 24.6,
+    "d": 18.2,
+    "bias20": -8.14
   },
   "macro": {
     "us10y_yield": 4.84,
